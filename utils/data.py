@@ -2,10 +2,10 @@ from scipy import linalg as la
 import numpy as np
 import emnist
 
-def get_emnist_images():
-    images, _ = emnist.extract_training_samples("letters")
+def get_emnist_training_images(subset="letters"):
+    images, _ = emnist.extract_training_samples(subset)
     column_stacked_images = [image.flatten(order="F") for image in images]
-    return column_stacked_images[0] / 255 # temporarily small dataset
+    return np.array(column_stacked_images[:100]) / 255 # temporarily small dataset
 
 # https://github.com/stellatogrp/data_driven_optimizer_guarantees/blob/main/opt_guarantees/examples/mnist.py
 def get_2D_blur_matrix(m, n, width):
