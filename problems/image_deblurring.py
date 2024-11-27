@@ -1,12 +1,10 @@
+from enums import Solver, get_qp_solve_map
 from solution import Solution
-from enums import Solver
 from scipy import sparse
-import gurobipy as gp
 import numpy as np
 import cvxpy as cp
 import clarabel
 
-# TODO: Handle when problems are infeasible
 # TODO: Standardize status reporting
 
 class ImageDeblurring:
@@ -15,8 +13,9 @@ class ImageDeblurring:
         self.x = x
         self.rho = rho
 
+        self.n = len(x)
+
         self.P = None
-        self.P_triu = None
         self.q = None
         self.D = None
         self.b = None
@@ -31,13 +30,13 @@ class ImageDeblurring:
         constraints = [y <= 1, y >= 0]
         problem = cp.Problem(cp.Minimize(objective), constraints)
 
-        optimal_value = problem.solve(verbose=verbose, warm_start=False)
+        optimal_value = problem.solve(verbose=verbose)
         optimal_solution = y.value
         dual_solution = [constraint.dual_value for constraint in constraints]
         solve_time = problem.solver_stats.solve_time
         status = problem.status
 
-        self.original_cvxpy_solution = Solution(Solver.cvxpy, optimal_value, 0,
+        self.original_cvxpy_solution = Solution(Solver.cvxpy, 0, optimal_value,
                                                 optimal_solution, None, dual_solution,
                                                 solve_time, status)
         return self.original_cvxpy_solution
@@ -50,78 +49,27 @@ class ImageDeblurring:
 
     def canonicalize(self):
         self.P = sparse.csc_matrix(2 * (self.A.T @ self.A))
-        self.P_triu = sparse.triu(self.P).tocsc()
         
-        n = len(self.x)
-        self.q = -2 * (self.A.T @ self.x) + self.rho * np.ones(n)
+        self.q = -2 * (self.A.T @ self.x) + self.rho * np.ones(self.n)
         
-        I_n = sparse.identity(n)
+        I_n = sparse.identity(self.n)
         self.D = sparse.vstack([I_n, -I_n]).tocsc()
         
-        self.b = np.concatenate([np.ones(n), np.zeros(n)])
+        self.b = np.concatenate([np.ones(self.n), np.zeros(self.n)])
         
-        self.cones = [clarabel.NonnegativeConeT(2 * n)]
+        self.cones = [clarabel.NonnegativeConeT(2 * self.n)]
 
     def solve(self, solver, verbose=False):
         if self.P is None:
             raise Exception(f"Problem not yet canonicalized!")
         
-        n = len(self.x)
         constant_objective = self.x.T @ self.x
 
-        if solver == Solver.CVXPY:
-            y = cp.Variable(n)
-            s = cp.Variable(2 * n)
-            objective = 0.5 * cp.quad_form(y, cp.psd_wrap(self.P)) + self.q @ y
-            constraints = [self.D @ y + s == self.b, s >= 0]
-            problem = cp.Problem(cp.Minimize(objective), constraints)
+        solve = get_qp_solve_map()[solver]
+        problem = (self.n, self.P, self.q, self.D, self.b, self.cones)
+        solution_tuple = solve(*problem, verbose)
 
-            optimal_value = problem.solve(verbose=verbose, warm_start=False)
-            optimal_solution = y.value
-            primal_slacks = s.value
-            dual_solution = constraints[0].dual_value
-            solve_time = problem.solver_stats.solve_time
-            status = problem.status
-        
-        if solver == Solver.CLARABEL:
-            settings = clarabel.DefaultSettings()
-            settings.verbose = verbose
-            problem = clarabel.DefaultSolver(self.P_triu, self.q, self.D, self.b, self.cones, settings)
-            solution = problem.solve()
-            
-            optimal_value = solution.obj_val
-            optimal_solution = solution.x
-            primal_slacks = solution.s
-            dual_solution = solution.z
-            solve_time = solution.solve_time
-            status = solution.status
-
-        if solver == Solver.GUROBI:
-            model = gp.Model("qp")
-            model.setParam("OutputFlag", int(verbose))
-            y = model.addMVar(shape=n, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
-            s = model.addMVar(shape=2 * n, lb=0, ub=gp.GRB.INFINITY)
-            objective = 0.5 * y @ self.P @ y + self.q @ y
-            model.setObjective(objective)
-            constraint = model.addConstr(self.D @ y + s == self.b)
-            model.optimize()
-
-            optimal_value = model.ObjVal
-            optimal_solution = y.X
-            primal_slacks = s.X
-            dual_solution = -constraint.Pi
-            solve_time = model.Runtime
-            status = model.Status
-
-        if solver == Solver.MOSEK:
-            pass
-
-        if solver == Solver.OSQP:
-            pass
-
-        solution = Solution(solver, optimal_value, constant_objective,
-                            optimal_solution, primal_slacks, dual_solution,
-                            solve_time, status)
+        solution = Solution(solver, constant_objective, *solution_tuple)
         self.solutions[solver] = solution
         return solution
 
