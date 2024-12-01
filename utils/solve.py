@@ -12,7 +12,6 @@ NONNEGATIVE_CONE = "NonnegativeConeT"
 def handle_cones(cones):
     m = 0
     cone_infos = []
-
     for cone in cones:
         name = str(cone)
         m += cone.dim
@@ -22,7 +21,6 @@ def handle_cones(cones):
             cone_infos.append((cone.dim, NONNEGATIVE_CONE))
         else:
             raise Exception(f"{cone} not supported!")
-
     return m, cone_infos
 
 def with_cvxpy(n, P, q, D, b, cones, verbose):
@@ -45,7 +43,6 @@ def with_cvxpy(n, P, q, D, b, cones, verbose):
     dual_solution = constraints[0].dual_value
     solve_time = problem.solver_stats.solve_time
     status = problem.status
-
     return (optimal_value, optimal_solution, primal_slacks,
             dual_solution, solve_time, status)
 
@@ -61,7 +58,6 @@ def with_clarabel(n, P, q, D, b, cones, verbose):
     dual_solution = solution.z
     solve_time = solution.solve_time
     status = solution.status
-
     return (optimal_value, optimal_solution, primal_slacks,
             dual_solution, solve_time, status)
 
@@ -90,7 +86,6 @@ def with_gurobi(n, P, q, D, b, cones, verbose):
     dual_solution = -constraint.Pi
     solve_time = model.Runtime
     status = model.Status
-
     return (optimal_value, optimal_solution, primal_slacks,
             dual_solution, solve_time, status)
 
@@ -126,7 +121,6 @@ def with_mosek(n, P, q, D, b, cones, verbose):
     dual_solution = -np.array(task.gety(mosek.soltype.itr)[:m])
     solve_time = task.getdouinf(mosek.dinfitem.optimizer_time)
     status = task.getsolsta(mosek.soltype.itr)
-    
     return (optimal_value, optimal_solution, primal_slacks,
             dual_solution, solve_time, status)
 
@@ -159,6 +153,5 @@ def with_osqp(n, P, q, D, b, cones, verbose):
     dual_solution = result.y[:m]
     solve_time = result.info.run_time
     status = result.info.status
-
     return (optimal_value, optimal_solution, primal_slacks,
             dual_solution, solve_time, status)

@@ -33,7 +33,7 @@ def is_solution_optimal(problem, solver, eps):
             return True
         primal_objective = solution.optimal_value
         dual_objective = -0.5 * y.T @ problem.P @ y - problem.b.T @ z
-        relative_term = np.maximum(1, np.minimum(np.abs(primal_objective), np.abs(dual_objective)))
-        return np.abs(primal_objective - dual_objective) < eps_duality_gap * relative_term
+        relative_term = np.maximum(1, np.minimum(abs(primal_objective), abs(dual_objective)))
+        return abs(primal_objective - dual_objective) < eps_duality_gap * relative_term
 
     return is_primal_solution_feasible() and is_dual_solution_feasible() and is_duality_gap_small()

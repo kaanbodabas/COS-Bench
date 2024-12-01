@@ -12,7 +12,7 @@ def check_optimality(problem, solver, eps):
 
 # TODO: parallelize
 # TODO: generalize
-def run_image_deblurring(blur_matrix_infos, images, rhos, csv_filename, solvers=get_qp_solvers(), eps=(10**-3, 10**-3, 10**-3)):
+def image_deblurring(blur_matrix_infos, images, rhos, csv_filename, solvers=get_qp_solvers(), eps=(10**-3, 10**-3, 10**-3)):
     solutions = []
     
     loading_bar = tqdm(solvers)
