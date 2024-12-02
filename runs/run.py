@@ -1,5 +1,5 @@
 from problems.image_deblurring import ImageDeblurring
-from enums import get_qp_solvers
+from enums import get_solvers
 from utils import data, verify
 from tqdm import tqdm
 import pandas as pd
@@ -12,7 +12,7 @@ def check_optimality(problem, solver, eps):
 
 # TODO: parallelize
 # TODO: generalize
-def image_deblurring(blur_matrix_infos, images, rhos, csv_filename, solvers=get_qp_solvers(), eps=(10**-3, 10**-3, 10**-3)):
+def image_deblurring(solvers, blur_matrix_infos, images, rhos, csv_filename, eps=(10**-3, 10**-3, 10**-3)):
     solutions = []
     
     loading_bar = tqdm(solvers)

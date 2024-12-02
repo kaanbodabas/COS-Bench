@@ -1,4 +1,4 @@
-from enums import Solver, get_qp_solve_map
+from enums import Solver, get_solve_map
 from solution import Solution
 from scipy import sparse
 import numpy as np
@@ -65,7 +65,7 @@ class ImageDeblurring:
         
         constant_objective = self.x.T @ self.x
 
-        solve = get_qp_solve_map()[solver]
+        solve = get_solve_map()[solver]
         problem = (self.n, self.P, self.q, self.D, self.b, self.cones)
         solution_tuple = solve(*problem, verbose)
 

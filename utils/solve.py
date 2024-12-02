@@ -1,3 +1,4 @@
+from ortools.linear_solver import pywraplp
 from scipy import sparse
 import gurobipy as gp
 import cvxpy as cp
@@ -5,6 +6,7 @@ import numpy as np
 import clarabel
 import mosek
 import osqp
+import scs
 
 ZERO_CONE = "ZeroConeT"
 NONNEGATIVE_CONE = "NonnegativeConeT"
@@ -20,7 +22,7 @@ def handle_cones(cones):
         elif name == NONNEGATIVE_CONE + f"({cone.dim})":
             cone_infos.append((cone.dim, NONNEGATIVE_CONE))
         else:
-            raise Exception(f"{cone} not supported!")
+            raise Exception(f"Cone {cone} not supported!")
     return m, cone_infos
 
 def with_cvxpy(n, P, q, D, b, cones, verbose):
@@ -145,13 +147,76 @@ def with_osqp(n, P, q, D, b, cones, verbose):
     ub = np.hstack([b, cone_ub])
     problem = osqp.OSQP()
     problem.setup(stacked_P, stacked_q, stacked_D, lb, ub, verbose=verbose)
-    result = problem.solve()
+    solution = problem.solve()
 
-    optimal_value = result.info.obj_val
-    optimal_solution = result.x[:n]
-    primal_slacks = result.x[n:]
-    dual_solution = result.y[:m]
-    solve_time = result.info.run_time
-    status = result.info.status
+    optimal_value = solution.info.obj_val
+    optimal_solution = solution.x[:n]
+    primal_slacks = solution.x[n:]
+    dual_solution = solution.y[:m]
+    solve_time = solution.info.run_time
+    status = solution.info.status
+    return (optimal_value, optimal_solution, primal_slacks,
+            dual_solution, solve_time, status)
+
+def with_pdlp(n, P, q, D, b, cones, verbose):
+    problem = pywraplp.Solver.CreateSolver("PDLP")
+    if not verbose:
+        problem.SuppressOutput()
+    y = [problem.NumVar(-problem.infinity(), problem.infinity(), f"y[{i}]") for i in range(n)]
+    m, cone_infos = handle_cones(cones)
+    s = []
+    for (dim, cone) in cone_infos:
+        for i in range(dim):
+            if cone == ZERO_CONE:
+                s.append(problem.NumVar(0, 0, f"s{i + len(s)}"))
+            elif cone == NONNEGATIVE_CONE:
+                s.append(problem.NumVar(0, problem.infinity(), f"s[{i + len(s)}]"))
+    constraints = []
+    for i in range(m):
+        constraint = problem.RowConstraint(b[i], b[i], f"constraint[{i}]")
+        for j in range(n):
+            constraint.SetCoefficient(y[j], D[i, j])
+        constraint.SetCoefficient(s[i], 1)
+        constraints.append(constraint)
+    objective = problem.Objective()
+    for i in range(n):
+        objective.SetCoefficient(y[i], q[i])
+    objective.SetMinimization()
+
+    status = problem.Solve()
+    optimal_value = problem.Objective().Value()
+    optimal_solution = [y_i.solution_value() for y_i in y]
+    primal_slacks = [s_i.solution_value() for s_i in s]
+    dual_solution = [-constraint.dual_value() for constraint in constraints]
+    solve_time = problem.wall_time()
+    return (optimal_value, optimal_solution, primal_slacks,
+            dual_solution, solve_time, status)
+
+def with_scs(n, P, q, D, b, cones, verbose):
+    m, cone_infos = handle_cones(cones)
+    stacked_P = sparse.block_diag([P, np.zeros((m, m))], format="csc")
+    stacked_q = np.hstack([q, np.zeros(m)])
+    stacked_D = sparse.vstack([
+        sparse.hstack([D, sparse.identity(m)]), 
+        sparse.hstack([np.zeros((m, n)), -sparse.identity(m)])], format="csc")
+    z = 0
+    l = 0
+    for (dim, cone) in cone_infos:
+        if cone == ZERO_CONE:
+            z += dim
+        elif cone == NONNEGATIVE_CONE:
+            l += dim
+    ub = np.hstack([b, np.zeros(m)])
+    data = dict(P=stacked_P, A=stacked_D, b=ub, c=stacked_q)
+    cone = dict(z=m + z, l=l)
+    problem = scs.SCS(data, cone, verbose=verbose)
+    solution = problem.solve()
+
+    optimal_value = solution["info"]["pobj"]
+    optimal_solution = solution["x"][:n]
+    primal_slacks = solution["x"][n:]
+    dual_solution = solution["y"][:m]
+    solve_time = solution["info"]["solve_time"] / 1000
+    status = solution["info"]["status"]
     return (optimal_value, optimal_solution, primal_slacks,
             dual_solution, solve_time, status)

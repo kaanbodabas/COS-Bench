@@ -4,7 +4,7 @@ import numpy as np
 
 def is_solution_optimal(problem, solver, eps):
 
-    # TODO: do something with checking status
+    # TODO: do something with checking status, failure rates
 
     solution = problem.get_solution(solver)
     y = np.array(solution.optimal_solution)
