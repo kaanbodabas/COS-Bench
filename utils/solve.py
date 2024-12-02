@@ -220,3 +220,13 @@ def with_scs(n, P, q, D, b, cones, verbose):
     status = solution["info"]["status"]
     return (optimal_value, optimal_solution, primal_slacks,
             dual_solution, solve_time, status)
+
+# def with_sdpa(n, P, q, D, b, cones, verbose):
+
+#     return (optimal_value, optimal_solution, primal_slacks,
+#             dual_solution, solve_time, status)
+
+# def with_copt(n, P, q, D, b, cones, verbose):
+
+#     return (optimal_value, optimal_solution, primal_slacks,
+#             dual_solution, solve_time, status)

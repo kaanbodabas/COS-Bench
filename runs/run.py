@@ -1,5 +1,4 @@
 from problems.image_deblurring import ImageDeblurring
-from enums import get_solvers
 from utils import data, verify
 from tqdm import tqdm
 import pandas as pd

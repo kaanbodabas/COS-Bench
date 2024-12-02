@@ -9,7 +9,6 @@ class Solver(Enum):
     OSQP = "OSQP"
     PDLP = "PDLP"
     SCS = "SCS"
-    CVXOPT = "CVXOPT"
     SDPA = "SPDA"
     COPT = "COPT"
 
@@ -17,15 +16,14 @@ class Solver(Enum):
         return self.value
 
 def get_solvers(problem_class):
-    pc = problem_class.upper()
-    if pc == "LP":
-        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.OSQP, Solver.PDLP]
-    elif pc == "QP":
-        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.OSQP, Solver.SCS]
-    elif pc == "SOCP":
-        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.SCS]
-    elif pc == "SDP":
-        return [Solver.CVXPY, Solver.CLARABEL, Solver.MOSEK, Solver.SCS]
+    if problem_class == "LP":
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.OSQP, Solver.PDLP, Solver.SCS, Solver.SDPA, Solver.COPT]
+    elif problem_class == "QP":
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.OSQP, Solver.SCS, Solver.COPT]
+    elif problem_class == "SOCP":
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.SCS, Solver.COPT]
+    elif problem_class == "SDP":
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.MOSEK, Solver.SCS, Solver.SDPA, Solver.COPT]
     else:
         raise Exception("Problem class {problem_class} not supported!")
 
