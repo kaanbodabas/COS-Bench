@@ -1,22 +1,15 @@
-from matplotlib import pyplot as plt
-from enums import get_solvers
-from utils import compute, data
-from runs import run
-import pandas as pd
+from utils import data, run, maps
+from enums import Problem
 
-blur_matrix_infos = [(28, 28, 8) for _ in range(1)]
-images = data.get_emnist_training_images()[:1]
-rhos = [1]
+# ensure the length of all 3 inputs are equal and that the inputs
+# are in proper order described by the class
+solvers = maps.get_solvers("QP")
 csv_filename = "image_deblurring"
+blur_matrix = [data.get_2D_blur_matrix(28, 28, 8)]
+images = data.get_emnist_training_images(1)
+rhos = [1]
+num_instances = 1
 plot_title = "Image Deblurring Solve Times"
 
-num_problems = len(images) * len(rhos)
-solvers = get_solvers("QP")
-
-run.image_deblurring(solvers, blur_matrix_infos, images, rhos, csv_filename)
-
-df = pd.read_csv(f"output/{csv_filename}.csv")
-solutions_df = df.drop(df.columns[0], axis=1)
-
-compute.plot_normalized_geometric_means(solvers, solutions_df, plot_title)
-compute.plot_performance_profiles(solvers, solutions_df, num_problems, plot_title)
+run.start(solvers, csv_filename, Problem.IMAGE_DEBLURRING, (blur_matrix, images, rhos))
+run.results(csv_filename, solvers, num_instances, plot_title)
