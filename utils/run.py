@@ -35,7 +35,7 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
             solution = problem.solve(solver)
 
             # optional to confirm valid reformulation
-            print("Reformulated:", solution.optimal_value + solution.constant_objective)
+            print(" Reformulated:", solution.optimal_value + solution.constant_objective)
             original_cvxpy_solution = problem.solve_original_in_cvxpy()
             print("Original:", original_cvxpy_solution.optimal_value)
 

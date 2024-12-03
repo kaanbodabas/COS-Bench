@@ -11,7 +11,7 @@ import scs
 ZERO_CONE = "ZeroConeT"
 NONNEGATIVE_CONE = "NonnegativeConeT"
 
-def handle_cones(cones):
+def parse_cones(cones):
     m = 0
     cone_infos = []
     for cone in cones:
@@ -27,7 +27,7 @@ def handle_cones(cones):
 
 def with_cvxpy(n, P, q, D, b, cones, verbose):
     y = cp.Variable(n)
-    m, cone_infos = handle_cones(cones) 
+    m, cone_infos = parse_cones(cones) 
     s = cp.Variable(m)
     objective = 0.5 * cp.quad_form(y, cp.psd_wrap(P)) + q @ y
     constraints = [D @ y + s == b]
@@ -69,7 +69,7 @@ def with_gurobi(n, P, q, D, b, cones, verbose):
     env.start()
     model = gp.Model("qp", env)
     y = model.addMVar(shape=n, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
-    m, cone_infos = handle_cones(cones) 
+    m, cone_infos = parse_cones(cones) 
     s = model.addMVar(shape=m, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
     objective = 0.5 * y @ P @ y + q @ y
     model.setObjective(objective)
@@ -95,25 +95,26 @@ def with_mosek(n, P, q, D, b, cones, verbose):
     env = mosek.Env()
     task = env.Task()
     task.putintparam(mosek.iparam.log, int(verbose))
-    m, cone_infos = handle_cones(cones)
+    m, cone_infos = parse_cones(cones)
     task.appendcons(m)
     task.appendvars(n + m)
     for j in range(n):
         task.putcj(j, q[j])
         task.putvarbound(j, mosek.boundkey.fr, -np.inf, np.inf)
-    if P.count_nonzero():
-        P = sparse.tril(P, format="coo")
-        task.putqobj(P.row, P.col, P.data)
+    P = sparse.tril(P, format="coo")
+    task.putqobj(P.row, P.col, P.data)
     stacked_D = sparse.hstack([D, sparse.identity(m)])
     task.putaijlist(*sparse.find(stacked_D))
     for j in range(m):
         task.putconbound(j, mosek.boundkey.fx, b[j], b[j])
+    j = 0
     for (dim, cone) in cone_infos:
-        for i in range(n, n + dim):
+        for i in range(n + j, n + j + dim):
             if cone == ZERO_CONE:
                 task.putvarbound(i, mosek.boundkey.fx, 0, 0)
             elif cone == NONNEGATIVE_CONE:
                 task.putvarbound(i, mosek.boundkey.lo, 0, np.inf)
+        j += dim
     task.putobjsense(mosek.objsense.minimize)
     task.optimize()
 
@@ -128,7 +129,7 @@ def with_mosek(n, P, q, D, b, cones, verbose):
             dual_solution, solve_time, status)
 
 def with_osqp(n, P, q, D, b, cones, verbose):
-    m, cone_infos = handle_cones(cones)
+    m, cone_infos = parse_cones(cones)
     stacked_P = sparse.block_diag([P, np.zeros((m, m))], format="csc")
     stacked_q = np.hstack([q, np.zeros(m)])
     stacked_D = sparse.vstack([
@@ -164,7 +165,7 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
     if not verbose:
         problem.SuppressOutput()
     y = [problem.NumVar(-problem.infinity(), problem.infinity(), f"y[{i}]") for i in range(n)]
-    m, cone_infos = handle_cones(cones)
+    m, cone_infos = parse_cones(cones)
     s = []
     for (dim, cone) in cone_infos:
         for i in range(dim):
@@ -194,7 +195,7 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
             dual_solution, solve_time, status)
 
 def with_scs(n, P, q, D, b, cones, verbose):
-    m, cone_infos = handle_cones(cones)
+    m, cone_infos = parse_cones(cones)
     stacked_P = sparse.block_diag([P, np.zeros((m, m))], format="csc")
     stacked_q = np.hstack([q, np.zeros(m)])
     stacked_D = sparse.vstack([
