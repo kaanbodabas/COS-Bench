@@ -5,9 +5,9 @@ from enums import Problem
 # are in proper order described by the class
 solvers = maps.get_solvers("QP")
 csv_filename = "image_deblurring"
-blur_matrix = [data.get_2D_blur_matrix(28, 28, 8)]
-images = data.get_emnist_training_images(1)
-rhos = [1]
+blur_matrix = [data.get_2D_blur_matrix(28, 28, 8)] * 2
+images = data.get_emnist_training_images(2)
+rhos = [1, 1]
 num_instances = 1
 plot_title = "Image Deblurring Solve Times"
 

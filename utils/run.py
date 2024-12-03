@@ -1,32 +1,35 @@
 from problems.image_deblurring import ImageDeblurring
 from problems.network_flow import NetworkFlow
+from joblib import Parallel, delayed
 from utils import verify, compute
 from enums import Problem
 from tqdm import tqdm
 import pandas as pd
 
+NUM_CORES = 8
+
 problem_map = {Problem.NETWORK_FLOW: NetworkFlow,
                Problem.IMAGE_DEBLURRING: ImageDeblurring}
 
-def check_optimality(problem, solver, eps, solutions, solve_time):
+def check_optimality(problem, solver, eps, solutions, solution):
+    # TODO: write more problem data to df?
     if verify.is_solution_optimal(problem, solver, eps):
-        solutions.append({"Solver": solver, "Solve Time": solve_time})
+        return {"Solver": solver, "Solve Time": solution.solve_time}
     else:
         print(f"Solver {solver} reports an inaccurate primal-dual solution!")
 
         # TODO: Handle when solvers fail - set a time limit
         # TODO: Status maps
 
-        solutions.append({"Solver": solver, "Solve Time": "fail"})
+        return {"Solver": solver, "Solve Time": "fail"}
 
-# TODO: parallelize
 def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3, 10**-3)):
     solutions = []
     loading_bar = tqdm(solvers)
     for solver in loading_bar:
         loading_bar.set_description(f"Solving instances in {solver}")
 
-        for instance in zip(*problem_data):
+        def parse_instances(instance):
             problem_class = problem_map[problem_type]
             problem = problem_class(*instance)
             problem.canonicalize()
@@ -34,7 +37,11 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
 
             # TODO: solve original in cvxpy objective check
 
-            check_optimality(problem, solver, eps, solutions, solution.solve_time)
+            return check_optimality(problem, solver, eps, solutions, solution)
+
+        num_jobs = min(len(problem_data[0]), NUM_CORES)
+        results = Parallel(num_jobs)(delayed(parse_instances)(instance) for instance in zip(*problem_data))
+        solutions.extend(results)
 
     pd.DataFrame(solutions, dtype=object).to_csv(f"output/{csv_filename}.csv")
 
