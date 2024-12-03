@@ -101,8 +101,9 @@ def with_mosek(n, P, q, D, b, cones, verbose):
     for j in range(n):
         task.putcj(j, q[j])
         task.putvarbound(j, mosek.boundkey.fr, -np.inf, np.inf)
-    P = sparse.tril(P, format="coo")
-    task.putqobj(P.row, P.col, P.data)
+    if P.count_nonzero():
+        P = sparse.tril(P, format="coo")
+        task.putqobj(P.row, P.col, P.data)
     stacked_D = sparse.hstack([D, sparse.identity(m)])
     task.putaijlist(*sparse.find(stacked_D))
     for j in range(m):
@@ -176,11 +177,11 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
         constraint = problem.RowConstraint(b[i], b[i], f"constraint[{i}]")
         for j in range(n):
             constraint.SetCoefficient(y[j], D[i, j])
-        constraint.SetCoefficient(s[i], 1)
+        constraint.SetCoefficient(s[i], 1.0)
         constraints.append(constraint)
     objective = problem.Objective()
     for i in range(n):
-        objective.SetCoefficient(y[i], q[i])
+        objective.SetCoefficient(y[i], float(q[i]))
     objective.SetMinimization()
 
     status = problem.Solve()

@@ -35,7 +35,7 @@ class ImageDeblurring(problem.Instance):
         dual_solution = [constraint.dual_value for constraint in constraints]
         solve_time = problem.solver_stats.solve_time
         status = problem.status
-        self.original_cvxpy_solution = Solution(Solver.cvxpy, 0, optimal_value,
+        self.original_cvxpy_solution = Solution(Solver.CVXPY, 0, optimal_value,
                                                 optimal_solution, None, dual_solution,
                                                 solve_time, status)
         return self.original_cvxpy_solution
@@ -48,7 +48,7 @@ class ImageDeblurring(problem.Instance):
         I_n = sparse.identity(self.n)
         self.D = sparse.vstack([I_n, -I_n]).tocsc()
         
-        self.b = np.concatenate([np.ones(self.n), np.zeros(self.n)])
+        self.b = np.hstack([np.ones(self.n), np.zeros(self.n)])
         
         self.cones = [clarabel.NonnegativeConeT(2 * self.n)]
 

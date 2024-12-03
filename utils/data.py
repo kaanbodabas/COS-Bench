@@ -22,19 +22,21 @@ def get_2D_blur_matrix(m, n, width):
     blur_rows = get_blur_matrix(n, width)
     return np.kron(blur_rows, blur_cols)
 
-def get_range_vector(n, lb, ub):
+def get_rho_range(n, lb, ub):
     pass
 
 def get_random_network(nodes, edge_probability):
     network = nx.erdos_renyi_graph(nodes, edge_probability)
+    costs = []
+    capacities = []
+    for u, v in network.edges():
+        # numbers are arbitrary for now
+        costs.append(5)
+        capacities.append(100)
+    incidence_matrix = np.array(nx.incidence_matrix(network, oriented=True).toarray())
+    return incidence_matrix, np.array(costs), np.array(capacities)
 
-    # add edge costs
-
-    # add edge capacities
-
-    # add supply/demand (parameterize this?)
-
-    return network
-
-def get_random_vector(n, lb, ub):
-    pass
+def get_random_supply(lb, ub, n):
+    random_vector = np.random.randint(lb, ub, n)
+    random_vector[0] -= sum(random_vector)
+    return random_vector

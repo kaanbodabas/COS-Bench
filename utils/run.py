@@ -11,7 +11,7 @@ NUM_CORES = 8
 problem_map = {Problem.NETWORK_FLOW: NetworkFlow,
                Problem.IMAGE_DEBLURRING: ImageDeblurring}
 
-def check_optimality(problem, solver, eps, solutions, solution):
+def check_optimality(problem, solver, eps, solution):
     # TODO: write more problem data to df?
     if verify.is_solution_optimal(problem, solver, eps):
         return {"Solver": solver, "Solve Time": solution.solve_time}
@@ -19,7 +19,6 @@ def check_optimality(problem, solver, eps, solutions, solution):
         print(f"Solver {solver} reports an inaccurate primal-dual solution!")
 
         # TODO: Handle when solvers fail - set a time limit
-        # TODO: Status maps
 
         return {"Solver": solver, "Solve Time": "fail"}
 
@@ -35,9 +34,12 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
             problem.canonicalize()
             solution = problem.solve(solver)
 
-            # TODO: solve original in cvxpy objective check
+            # optional to confirm valid reformulation
+            print("Reformulated:", solution.optimal_value + solution.constant_objective)
+            original_cvxpy_solution = problem.solve_original_in_cvxpy()
+            print("Original:", original_cvxpy_solution.optimal_value)
 
-            return check_optimality(problem, solver, eps, solutions, solution)
+            return check_optimality(problem, solver, eps, solution)
 
         num_jobs = min(len(problem_data[0]), NUM_CORES)
         results = Parallel(num_jobs)(delayed(parse_instances)(instance) for instance in zip(*problem_data))
