@@ -10,7 +10,7 @@ import scs
 
 ZERO_CONE = "ZeroConeT"
 NONNEGATIVE_CONE = "NonnegativeConeT"
-TIME_LIMIT = 600 # 10 minutes
+TIME_LIMIT = 600
 SOLVED = "solution returned"
 SOLUTION_RETURNED = ["optimal", "optimal_inaccurate",
                      "Solved", "AlmostSolved",
@@ -62,6 +62,7 @@ def with_cvxpy(n, P, q, D, b, cones, verbose):
 def with_clarabel(n, P, q, D, b, cones, verbose):
     settings = clarabel.DefaultSettings()
     settings.verbose = verbose
+    settings.time_limit = TIME_LIMIT
     problem = clarabel.DefaultSolver(P, q, D, b, cones, settings)
     solution = problem.solve()
     
@@ -79,6 +80,7 @@ def with_clarabel(n, P, q, D, b, cones, verbose):
 def with_gurobi(n, P, q, D, b, cones, verbose):
     env = gp.Env(empty=True)
     env.setParam("OutputFlag", int(verbose))
+    env.setParam("TimeLimit", TIME_LIMIT)
     env.start()
     model = gp.Model("qp", env)
     y = model.addMVar(shape=n, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
@@ -111,6 +113,7 @@ def with_mosek(n, P, q, D, b, cones, verbose):
     env = mosek.Env()
     task = env.Task()
     task.putintparam(mosek.iparam.log, int(verbose))
+    task.putdouparam(mosek.dparam.optimizer_max_time, TIME_LIMIT)
     m, cone_infos = parse_cones(cones)
     task.appendcons(m)
     task.appendvars(n + m)
@@ -166,7 +169,8 @@ def with_osqp(n, P, q, D, b, cones, verbose):
     lb = np.hstack([b, cone_lb])
     ub = np.hstack([b, cone_ub])
     problem = osqp.OSQP()
-    problem.setup(stacked_P, stacked_q, stacked_D, lb, ub, verbose=verbose)
+    problem.setup(stacked_P, stacked_q, stacked_D, lb, ub,
+                  verbose=verbose, time_limit=TIME_LIMIT)
     solution = problem.solve()
 
     status = solution.info.status
@@ -184,6 +188,7 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
     problem = pywraplp.Solver.CreateSolver("PDLP")
     if not verbose:
         problem.SuppressOutput()
+    problem.set_time_limit(TIME_LIMIT * 1000)
     y = [problem.NumVar(-problem.infinity(), problem.infinity(), f"y[{i}]") for i in range(n)]
     m, cone_infos = parse_cones(cones)
     s = []
@@ -233,7 +238,7 @@ def with_scs(n, P, q, D, b, cones, verbose):
     ub = np.hstack([b, np.zeros(m)])
     data = dict(P=stacked_P, A=stacked_D, b=ub, c=stacked_q)
     cone = dict(z=m + z, l=l)
-    problem = scs.SCS(data, cone, verbose=verbose)
+    problem = scs.SCS(data, cone, verbose=verbose, time_limit_secs=TIME_LIMIT)
     solution = problem.solve()
 
     status = solution["info"]["status"]
