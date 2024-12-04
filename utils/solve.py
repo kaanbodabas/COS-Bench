@@ -1,4 +1,5 @@
-from ortools.linear_solver import pywraplp
+from ortools.pdlp import solvers_pb2, solve_log_pb2
+from ortools.pdlp.python import pdlp
 from scipy import sparse
 import gurobipy as gp
 import cvxpy as cp
@@ -17,7 +18,7 @@ SOLUTION_RETURNED = ["optimal", "optimal_inaccurate",
                      gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL,
                      mosek.solsta.optimal, mosek.solsta.integer_optimal,
                      "solved", "solved inaccurate",
-                     pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE]
+                     solve_log_pb2.TerminationReason.TERMINATION_REASON_OPTIMAL]
 
 def parse_cones(cones):
     m = 0
@@ -184,38 +185,40 @@ def with_osqp(n, P, q, D, b, cones, verbose):
     return (None, None, None, None, TIME_LIMIT, status)
 
 def with_pdlp(n, P, q, D, b, cones, verbose):
-    problem = pywraplp.Solver.CreateSolver("PDLP")
-    if not verbose:
-        problem.SuppressOutput()
-    problem.set_time_limit(TIME_LIMIT * 1000)
-    y = [problem.NumVar(-problem.infinity(), problem.infinity(), f"y[{i}]") for i in range(n)]
+    problem = pdlp.QuadraticProgram()
     m, cone_infos = parse_cones(cones)
-    s = []
+    problem.objective_vector = np.hstack([q, np.zeros(m)])
+    problem.variable_lower_bounds = -np.inf * np.ones(n + m)
+    problem.variable_upper_bounds = np.inf * np.ones(n + m)
+    problem.constraint_matrix = sparse.vstack([
+        sparse.hstack([D, sparse.identity(m)]),
+        sparse.hstack([np.zeros((m, n)), sparse.identity(m)])], format="csc")
+    cone_lb = []
+    cone_ub = []
     for (dim, cone) in cone_infos:
-        for i in range(dim):
+        for _ in range(dim):
             if cone == ZERO_CONE:
-                s.append(problem.NumVar(0, 0, f"s{i + len(s)}"))
+                cone_lb.append(0)
+                cone_ub.append(0)
             elif cone == NONNEGATIVE_CONE:
-                s.append(problem.NumVar(0, problem.infinity(), f"s[{i + len(s)}]"))
-    constraints = []
-    for i in range(m):
-        constraint = problem.RowConstraint(b[i], b[i], f"constraint[{i}]")
-        for j in range(n):
-            constraint.SetCoefficient(y[j], D[i, j])
-        constraint.SetCoefficient(s[i], 1.0)
-        constraints.append(constraint)
-    objective = problem.Objective()
-    for i in range(n):
-        objective.SetCoefficient(y[i], float(q[i]))
-    objective.SetMinimization()
-
-    status = problem.Solve()
+                cone_lb.append(0)
+                cone_ub.append(np.inf)
+    lb = np.hstack([b, cone_lb])
+    ub = np.hstack([b, cone_ub])
+    problem.constraint_lower_bounds = lb
+    problem.constraint_upper_bounds = ub
+    settings = solvers_pb2.PrimalDualHybridGradientParams()
+    settings.verbosity_level = int(verbose)
+    settings.termination_criteria.time_sec_limit = TIME_LIMIT
+    solution = pdlp.primal_dual_hybrid_gradient(problem, settings)
+    
+    status = solution.solve_log.termination_reason
     if status in SOLUTION_RETURNED:
-        optimal_value = problem.Objective().Value()
-        optimal_solution = [y_i.solution_value() for y_i in y]
-        primal_slacks = [s_i.solution_value() for s_i in s]
-        dual_solution = [-constraint.dual_value() for constraint in constraints]
-        solve_time = problem.wall_time() / 1000
+        optimal_value = solution.solve_log.solution_stats.convergence_information[0].primal_objective
+        optimal_solution = solution.primal_solution[:n]
+        primal_slacks = solution.primal_solution[n:]
+        dual_solution = -solution.dual_solution[:m]
+        solve_time = solution.solve_log.solution_stats.cumulative_time_sec
         return (optimal_value, optimal_solution, primal_slacks,
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)

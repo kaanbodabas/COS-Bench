@@ -22,6 +22,7 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
     loading_bar = tqdm(solvers)
     for solver in loading_bar:
         loading_bar.set_description(f"Solving instances in {solver}")
+        print()
 
         def parse_instances(instance):
             problem_class = PROBLEM_MAP[problem_type]
@@ -30,10 +31,9 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
             solution = problem.solve(solver)
 
             # optional to confirm valid reformulation
-            # print()
-            # print("Reformulated:", solution.optimal_value + solution.constant_objective)
-            # original_cvxpy_solution = problem.solve_original_in_cvxpy()
-            # print("Original:", original_cvxpy_solution.optimal_value)
+            print("Reformulated:", solution.optimal_value + solution.constant_objective)
+            original_cvxpy_solution = problem.solve_original_in_cvxpy()
+            print("Original:", original_cvxpy_solution.optimal_value)
 
             return check_optimality(problem, solver, eps, solution)
 

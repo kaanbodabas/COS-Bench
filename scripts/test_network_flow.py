@@ -1,14 +1,18 @@
 from utils import data, run, maps
 from enums import Problem
-import numpy as np
 
 solvers = maps.get_solvers("LP")
 csv_filename = "network_flow"
-incidence_matrix, supply, cost, capacity = data.get_random_network(40, 0.3)
-incidence_matrices = [incidence_matrix]
-supplies = [supply]
-costs = [cost]
-capacities = [capacity]
+incidence_matrices = []
+supplies = []
+costs = []
+capacities = []
+for _ in range(2):
+    incidence_matrix, supply, cost, capacity = data.get_random_network(40, 0.3)
+    incidence_matrices.append(incidence_matrix)
+    supplies.append(supply)
+    costs.append(cost)
+    capacities.append(capacity)
 num_instances = 1
 plot_title = "Network Flow Solve Times"
 
