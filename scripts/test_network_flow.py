@@ -4,7 +4,7 @@ import numpy as np
 
 solvers = maps.get_solvers("LP")
 csv_filename = "network_flow"
-# incidence_matrix, cost, capacity = data.get_random_network(10, 1)
+# incidence_matrix, cost, capacity = data.get_random_network(10, 0.5)
 # incidence_matrices = [incidence_matrix]
 # costs = [cost]
 # capacities = [capacity]

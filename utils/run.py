@@ -7,20 +7,14 @@ from tqdm import tqdm
 import pandas as pd
 
 NUM_CORES = 8
-
-problem_map = {Problem.NETWORK_FLOW: NetworkFlow,
+PROBLEM_MAP = {Problem.NETWORK_FLOW: NetworkFlow,
                Problem.IMAGE_DEBLURRING: ImageDeblurring}
 
 def check_optimality(problem, solver, eps, solution):
-    # TODO: write more problem data to df?
-    if verify.is_solution_optimal(problem, solver, eps):
-        return {"Solver": solver, "Solve Time": solution.solve_time}
-    else:
+    if not verify.is_solution_optimal(problem, solver, eps):
         print(f"Solver {solver} reports an inaccurate primal-dual solution!")
-
-        # TODO: Handle when solvers fail - set a time limit
-
-        return {"Solver": solver, "Solve Time": "fail"}
+    # TODO: failure rates
+    return {"Solver": solver, "Solve Time": solution.solve_time}
 
 def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3, 10**-3)):
     solutions = []
@@ -29,7 +23,7 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
         loading_bar.set_description(f"Solving instances in {solver}")
 
         def parse_instances(instance):
-            problem_class = problem_map[problem_type]
+            problem_class = PROBLEM_MAP[problem_type]
             problem = problem_class(*instance)
             problem.canonicalize()
             solution = problem.solve(solver)

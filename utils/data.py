@@ -3,6 +3,8 @@ import networkx as nx
 import numpy as np
 import emnist
 
+import matplotlib.pyplot as plt
+
 def get_emnist_training_images(amt, subset="letters"):
     images, _ = emnist.extract_training_samples(subset)
     column_stacked_images = [image.flatten(order="F") for image in images]
@@ -29,7 +31,7 @@ def get_random_network(nodes, edge_probability):
     network = nx.erdos_renyi_graph(nodes, edge_probability)
     costs = []
     capacities = []
-    for u, v in network.edges():
+    for _, _ in network.edges():
         # numbers are arbitrary for now
         costs.append(5)
         capacities.append(100)

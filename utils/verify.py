@@ -4,9 +4,10 @@ import numpy as np
 
 def is_solution_optimal(problem, solver, eps):
 
-    # TODO: do something with checking status, failure rates
-
     solution = problem.get_solution(solver)
+    if solution.optimal_value is None:
+        return False
+
     y = np.array(solution.optimal_solution)
     s = np.array(solution.primal_slacks)
     z = np.array(solution.dual_solution)

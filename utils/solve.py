@@ -10,6 +10,14 @@ import scs
 
 ZERO_CONE = "ZeroConeT"
 NONNEGATIVE_CONE = "NonnegativeConeT"
+TIME_LIMIT = 600 # 10 minutes
+SOLVED = "solution returned"
+SOLUTION_RETURNED = ["optimal", "optimal_inaccurate",
+                     "Solved", "AlmostSolved",
+                     gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL,
+                     mosek.solsta.optimal, mosek.solsta.integer_optimal,
+                     "solved", "solved inaccurate",
+                     pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE]
 
 def parse_cones(cones):
     m = 0
@@ -40,13 +48,16 @@ def with_cvxpy(n, P, q, D, b, cones, verbose):
     problem = cp.Problem(cp.Minimize(objective), constraints)
 
     optimal_value = problem.solve(verbose=verbose)
-    optimal_solution = y.value
-    primal_slacks = s.value
-    dual_solution = constraints[0].dual_value
-    solve_time = problem.solver_stats.solve_time
     status = problem.status
-    return (optimal_value, optimal_solution, primal_slacks,
-            dual_solution, solve_time, status)
+    if status in SOLUTION_RETURNED:
+        optimal_solution = y.value
+        primal_slacks = s.value
+        dual_solution = constraints[0].dual_value
+        solve_time = problem.solver_stats.solve_time
+        return (optimal_value, optimal_solution, primal_slacks,
+                dual_solution, solve_time, SOLVED)
+    return (None, None, None, None, TIME_LIMIT, status)
+    
 
 def with_clarabel(n, P, q, D, b, cones, verbose):
     settings = clarabel.DefaultSettings()
@@ -54,14 +65,16 @@ def with_clarabel(n, P, q, D, b, cones, verbose):
     problem = clarabel.DefaultSolver(P, q, D, b, cones, settings)
     solution = problem.solve()
     
-    optimal_value = solution.obj_val
-    optimal_solution = solution.x
-    primal_slacks = solution.s
-    dual_solution = solution.z
-    solve_time = solution.solve_time
     status = solution.status
-    return (optimal_value, optimal_solution, primal_slacks,
-            dual_solution, solve_time, status)
+    if status in SOLUTION_RETURNED:
+        optimal_value = solution.obj_val
+        optimal_solution = solution.x
+        primal_slacks = solution.s
+        dual_solution = solution.z
+        solve_time = solution.solve_time
+        return (optimal_value, optimal_solution, primal_slacks,
+                dual_solution, solve_time, SOLVED)
+    return (None, None, None, None, TIME_LIMIT, status)
 
 def with_gurobi(n, P, q, D, b, cones, verbose):
     env = gp.Env(empty=True)
@@ -82,14 +95,17 @@ def with_gurobi(n, P, q, D, b, cones, verbose):
                 model.addConstr(s[i] >= 0)
     model.optimize()
 
-    optimal_value = model.ObjVal
-    optimal_solution = y.X
-    primal_slacks = s.X
-    dual_solution = -constraint.Pi
-    solve_time = model.Runtime
     status = model.Status
-    return (optimal_value, optimal_solution, primal_slacks,
-            dual_solution, solve_time, status)
+    if status in SOLUTION_RETURNED:
+        optimal_value = model.ObjVal
+        optimal_solution = y.X
+        primal_slacks = s.X
+        dual_solution = -constraint.Pi
+        solve_time = model.Runtime
+        status = model.Status
+        return (optimal_value, optimal_solution, primal_slacks,
+                dual_solution, solve_time, SOLVED)
+    return (None, None, None, None, TIME_LIMIT, status)
 
 def with_mosek(n, P, q, D, b, cones, verbose):
     env = mosek.Env()
@@ -118,15 +134,17 @@ def with_mosek(n, P, q, D, b, cones, verbose):
     task.putobjsense(mosek.objsense.minimize)
     task.optimize()
 
-    optimal_value = task.getprimalobj(mosek.soltype.itr)
-    primal_variables = np.array(task.getxx(mosek.soltype.itr))
-    optimal_solution = primal_variables[:n]
-    primal_slacks = primal_variables[n:]
-    dual_solution = -np.array(task.gety(mosek.soltype.itr)[:m])
-    solve_time = task.getdouinf(mosek.dinfitem.optimizer_time)
     status = task.getsolsta(mosek.soltype.itr)
-    return (optimal_value, optimal_solution, primal_slacks,
-            dual_solution, solve_time, status)
+    if status in SOLUTION_RETURNED:
+        optimal_value = task.getprimalobj(mosek.soltype.itr)
+        primal_variables = np.array(task.getxx(mosek.soltype.itr))
+        optimal_solution = primal_variables[:n]
+        primal_slacks = primal_variables[n:]
+        dual_solution = -np.array(task.gety(mosek.soltype.itr)[:m])
+        solve_time = task.getdouinf(mosek.dinfitem.optimizer_time)
+        return (optimal_value, optimal_solution, primal_slacks,
+                dual_solution, solve_time, SOLVED)
+    return (None, None, None, None, TIME_LIMIT, status)
 
 def with_osqp(n, P, q, D, b, cones, verbose):
     m, cone_infos = parse_cones(cones)
@@ -151,14 +169,16 @@ def with_osqp(n, P, q, D, b, cones, verbose):
     problem.setup(stacked_P, stacked_q, stacked_D, lb, ub, verbose=verbose)
     solution = problem.solve()
 
-    optimal_value = solution.info.obj_val
-    optimal_solution = solution.x[:n]
-    primal_slacks = solution.x[n:]
-    dual_solution = solution.y[:m]
-    solve_time = solution.info.run_time
     status = solution.info.status
-    return (optimal_value, optimal_solution, primal_slacks,
-            dual_solution, solve_time, status)
+    if status in SOLUTION_RETURNED:
+        optimal_value = solution.info.obj_val
+        optimal_solution = solution.x[:n]
+        primal_slacks = solution.x[n:]
+        dual_solution = solution.y[:m]
+        solve_time = solution.info.run_time
+        return (optimal_value, optimal_solution, primal_slacks,
+                dual_solution, solve_time, SOLVED)
+    return (None, None, None, None, TIME_LIMIT, status)
 
 def with_pdlp(n, P, q, D, b, cones, verbose):
     problem = pywraplp.Solver.CreateSolver("PDLP")
@@ -186,13 +206,15 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
     objective.SetMinimization()
 
     status = problem.Solve()
-    optimal_value = problem.Objective().Value()
-    optimal_solution = [y_i.solution_value() for y_i in y]
-    primal_slacks = [s_i.solution_value() for s_i in s]
-    dual_solution = [-constraint.dual_value() for constraint in constraints]
-    solve_time = problem.wall_time()
-    return (optimal_value, optimal_solution, primal_slacks,
-            dual_solution, solve_time, status)
+    if status in SOLUTION_RETURNED:
+        optimal_value = problem.Objective().Value()
+        optimal_solution = [y_i.solution_value() for y_i in y]
+        primal_slacks = [s_i.solution_value() for s_i in s]
+        dual_solution = [-constraint.dual_value() for constraint in constraints]
+        solve_time = problem.wall_time()
+        return (optimal_value, optimal_solution, primal_slacks,
+                dual_solution, solve_time, SOLVED)
+    return (None, None, None, None, TIME_LIMIT, status)
 
 def with_scs(n, P, q, D, b, cones, verbose):
     m, cone_infos = parse_cones(cones)
@@ -214,14 +236,16 @@ def with_scs(n, P, q, D, b, cones, verbose):
     problem = scs.SCS(data, cone, verbose=verbose)
     solution = problem.solve()
 
-    optimal_value = solution["info"]["pobj"]
-    optimal_solution = solution["x"][:n]
-    primal_slacks = solution["x"][n:]
-    dual_solution = solution["y"][:m]
-    solve_time = solution["info"]["solve_time"] / 1000
     status = solution["info"]["status"]
-    return (optimal_value, optimal_solution, primal_slacks,
-            dual_solution, solve_time, status)
+    if status in SOLUTION_RETURNED:
+        optimal_value = solution["info"]["pobj"]
+        optimal_solution = solution["x"][:n]
+        primal_slacks = solution["x"][n:]
+        dual_solution = solution["y"][:m]
+        solve_time = solution["info"]["solve_time"] / 1000
+        return (optimal_value, optimal_solution, primal_slacks,
+                dual_solution, solve_time, SOLVED)
+    return (None, None, None, None, TIME_LIMIT, status)
 
 # def with_sdpa(n, P, q, D, b, cones, verbose):
 
