@@ -104,7 +104,6 @@ def with_gurobi(n, P, q, D, b, cones, verbose):
         primal_slacks = s.X
         dual_solution = -constraint.Pi
         solve_time = model.Runtime
-        status = model.Status
         return (optimal_value, optimal_solution, primal_slacks,
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)
@@ -216,7 +215,7 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
         optimal_solution = [y_i.solution_value() for y_i in y]
         primal_slacks = [s_i.solution_value() for s_i in s]
         dual_solution = [-constraint.dual_value() for constraint in constraints]
-        solve_time = problem.wall_time()
+        solve_time = problem.wall_time() / 1000
         return (optimal_value, optimal_solution, primal_slacks,
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)

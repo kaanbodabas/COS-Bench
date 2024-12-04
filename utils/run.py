@@ -15,7 +15,7 @@ def check_optimality(problem, solver, eps, solution):
     if not verify.is_solution_optimal(problem, solver, eps):
         print(f"Solver {solver} reports an inaccurate primal-dual solution!")
         success = False
-    return {"Solver": solver, "Solve Time": solution.solve_time, "Success": False}
+    return {"Solver": solver, "Solve Time": solution.solve_time, "Success": success}
 
 def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3, 10**-3)):
     solutions = []
@@ -30,9 +30,10 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
             solution = problem.solve(solver)
 
             # optional to confirm valid reformulation
-            print(" Reformulated:", solution.optimal_value + solution.constant_objective)
-            original_cvxpy_solution = problem.solve_original_in_cvxpy()
-            print("Original:", original_cvxpy_solution.optimal_value)
+            # print()
+            # print("Reformulated:", solution.optimal_value + solution.constant_objective)
+            # original_cvxpy_solution = problem.solve_original_in_cvxpy()
+            # print("Original:", original_cvxpy_solution.optimal_value)
 
             return check_optimality(problem, solver, eps, solution)
 

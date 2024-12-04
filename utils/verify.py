@@ -3,7 +3,6 @@ from enums import Solver
 import numpy as np
 
 def is_solution_optimal(problem, solver, eps):
-
     solution = problem.get_solution(solver)
     if solution.optimal_value is None:
         return False

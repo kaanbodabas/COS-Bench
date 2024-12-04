@@ -3,8 +3,6 @@ import networkx as nx
 import numpy as np
 import emnist
 
-import matplotlib.pyplot as plt
-
 def get_emnist_training_images(amt, subset="letters"):
     images, _ = emnist.extract_training_samples(subset)
     column_stacked_images = [image.flatten(order="F") for image in images]
@@ -27,18 +25,40 @@ def get_2D_blur_matrix(m, n, width):
 def get_rho_range(n, lb, ub):
     pass
 
-def get_random_network(nodes, edge_probability):
-    network = nx.erdos_renyi_graph(nodes, edge_probability)
-    costs = []
-    capacities = []
-    for _, _ in network.edges():
-        # numbers are arbitrary for now
-        costs.append(5)
-        capacities.append(100)
-    incidence_matrix = np.array(nx.incidence_matrix(network, oriented=True).toarray())
-    return incidence_matrix, np.array(costs), np.array(capacities)
+def get_random_network(n, p):
+    G = nx.DiGraph()
+    for i in range(n - 1):
+        G.add_edge(i, i + 1)
+    for u in range(n):
+        for v in range(n):
+            if u != v and np.random.random() < p:
+                G.add_edge(u, v)
+    incidence_matrix = np.array(nx.incidence_matrix(G, oriented=True).toarray())
+    
+    supply = []
+    for node in range(n):
+        net_degree = G.out_degree(node) - G.in_degree(node)
+        if net_degree > 0:
+            supply.append(np.random.randint(0, 25))
+        elif net_degree < 0:
+            supply.append(-np.random.randint(0, 25))
+        else:
+            supply.append(0)
+    extra = sum(supply)
+    for i in range(n):
+        while supply[i] > 0 and extra > 0:
+            supply[i] -= 1
+            extra -= 1
+        while supply[i] < 0 and extra < 0:
+            supply[i] += 1
+            extra += 1
+        if extra == 0:
+            break
 
-def get_random_supply(lb, ub, n):
-    random_vector = np.random.randint(lb, ub, n)
-    random_vector[0] -= sum(random_vector)
-    return random_vector
+    cost = []
+    capacity = []
+    for _, _ in G.edges():
+        cost.append(np.random.randint(0, 10))
+        capacity.append(np.random.randint(10, 30))
+
+    return incidence_matrix, np.array(supply), np.array(cost), np.array(capacity)

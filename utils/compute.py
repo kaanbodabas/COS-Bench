@@ -6,7 +6,7 @@ PP = " Performance Profiles"
 FR = " Failure Rates"
 
 def get_solve_times(solver, solutions_df):
-    return solutions_df[solutions_df["Solver"] == solver.value]["Solve Time"].to_numpy(dtype=float)
+    return solutions_df[solutions_df["Solver"] == solver.value]["Solve Time"].to_numpy(dtype=float) + 0.001
 
 def get_num_fails(solver, solutions_df):
     return solutions_df[solutions_df["Solver"] == solver.value]["Success"].eq(False).sum()
@@ -27,10 +27,15 @@ def plot_normalized_geometric_means(solvers, solutions_df, title):
         means[solver] = shifted_geometric_mean(solve_times)
     means = normalized_geometric_mean(means)
 
+    plt.figure(figsize=(8, 6))
     bars = plt.bar([key.value for key in means.keys()], means.values())
     for bar in bars:
         height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2, height, str(round(height, 2)), ha="center", va="bottom")
+        if height >= 100000:
+            mean = format(height, ".2e")
+        else:
+            mean = round(height, 2)
+        plt.text(bar.get_x() + bar.get_width() / 2, height, str(mean), ha="center", va="bottom")
     plt.title(title + SGM)
     plt.show()
     
@@ -59,6 +64,7 @@ def plot_performance_profiles(solvers, solutions_df, num_instances, title, num_t
         solver_times[solver] = solve_times
     profiles = performance_profiles(solvers, solver_times, num_instances, taus, num_taus)
 
+    plt.figure(figsize=(8, 6))
     for solver in solvers:
         plt.plot(taus, profiles[solver], label=solver)
     plt.xlabel("Performance Ratio")
@@ -74,6 +80,7 @@ def plot_failure_rates(solvers, solutions_df, num_instances, title):
     for solver in solvers:
         failure_rates[solver] = get_num_fails(solver, solutions_df) / num_instances
     
+    plt.figure(figsize=(8, 6))
     plt.bar([key.value for key in failure_rates.keys()], failure_rates.values())
     plt.title(title + FR)
     plt.show()
