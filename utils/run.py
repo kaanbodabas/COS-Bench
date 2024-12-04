@@ -50,3 +50,4 @@ def results(csv_filename, solvers, num_instances, plot_title):
     compute.plot_normalized_geometric_means(solvers, solutions_df, plot_title)
     compute.plot_performance_profiles(solvers, solutions_df, num_instances, plot_title)
     compute.plot_failure_rates(solvers, solutions_df, num_instances, plot_title)
+    compute.plot_average_solve_times(solvers, solutions_df, num_instances, plot_title)
