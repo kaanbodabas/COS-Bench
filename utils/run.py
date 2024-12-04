@@ -11,10 +11,11 @@ PROBLEM_MAP = {Problem.NETWORK_FLOW: NetworkFlow,
                Problem.IMAGE_DEBLURRING: ImageDeblurring}
 
 def check_optimality(problem, solver, eps, solution):
+    success = True
     if not verify.is_solution_optimal(problem, solver, eps):
         print(f"Solver {solver} reports an inaccurate primal-dual solution!")
-    # TODO: failure rates
-    return {"Solver": solver, "Solve Time": solution.solve_time}
+        success = False
+    return {"Solver": solver, "Solve Time": solution.solve_time, "Success": False}
 
 def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3, 10**-3)):
     solutions = []
@@ -47,3 +48,4 @@ def results(csv_filename, solvers, num_instances, plot_title):
 
     compute.plot_normalized_geometric_means(solvers, solutions_df, plot_title)
     compute.plot_performance_profiles(solvers, solutions_df, num_instances, plot_title)
+    compute.plot_failure_rates(solvers, solutions_df, num_instances, plot_title)

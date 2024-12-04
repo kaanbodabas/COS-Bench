@@ -3,9 +3,13 @@ import numpy as np
 
 SGM = " Shifted Geometric Means"
 PP = " Performance Profiles"
+FR = " Failure Rates"
 
 def get_solve_times(solver, solutions_df):
     return solutions_df[solutions_df["Solver"] == solver.value]["Solve Time"].to_numpy(dtype=float)
+
+def get_num_fails(solver, solutions_df):
+    return solutions_df[solutions_df["Solver"] == solver.value]["Success"].eq(False).sum()
 
 def shifted_geometric_mean(solve_times, shift=10):
     return np.exp(np.sum(np.log(np.maximum(1, solve_times + shift)) / len(solve_times))) - shift
@@ -30,8 +34,8 @@ def plot_normalized_geometric_means(solvers, solutions_df, title):
     plt.title(title + SGM)
     plt.show()
     
-def performance_profiles(solvers, solver_times, num_problems, taus, num_taus):
-    for p in range(num_problems):
+def performance_profiles(solvers, solver_times, num_instances, taus, num_taus):
+    for p in range(num_instances):
         min_time = min([solver_times[solver][p] for solver in solvers])
         for solver in solvers:
             solver_times[solver][p] /= min_time
@@ -41,19 +45,19 @@ def performance_profiles(solvers, solver_times, num_problems, taus, num_taus):
         profiles[solver] = np.zeros(num_taus)
         for t in range(num_taus):
             ratio_indicator = 0
-            for p in range(num_problems):
+            for p in range(num_instances):
                 if solver_times[solver][p] <= taus[t]:
                     ratio_indicator += 1
-            profiles[solver][t] = ratio_indicator / num_problems
+            profiles[solver][t] = ratio_indicator / num_instances
     return profiles
 
-def plot_performance_profiles(solvers, solutions_df, num_problems, title, num_taus=1000):
+def plot_performance_profiles(solvers, solutions_df, num_instances, title, num_taus=1000):
     solver_times = {}
     taus = np.logspace(0, 4, num_taus)
     for solver in solvers:
         solve_times = get_solve_times(solver, solutions_df)
         solver_times[solver] = solve_times
-    profiles = performance_profiles(solvers, solver_times, num_problems, taus, num_taus)
+    profiles = performance_profiles(solvers, solver_times, num_instances, taus, num_taus)
 
     for solver in solvers:
         plt.plot(taus, profiles[solver], label=solver)
@@ -63,4 +67,13 @@ def plot_performance_profiles(solvers, solutions_df, num_problems, title, num_ta
     plt.title(title + PP)
     plt.legend()
     plt.grid()
+    plt.show()
+
+def plot_failure_rates(solvers, solutions_df, num_instances, title):
+    failure_rates = {}
+    for solver in solvers:
+        failure_rates[solver] = get_num_fails(solver, solutions_df) / num_instances
+    
+    plt.bar([key.value for key in failure_rates.keys()], failure_rates.values())
+    plt.title(title + FR)
     plt.show()
