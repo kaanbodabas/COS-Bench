@@ -1,5 +1,6 @@
 from problems.image_deblurring import ImageDeblurring
 from problems.network_flow import NetworkFlow
+from problems.maxcut import Maxcut
 from joblib import Parallel, delayed
 from utils import verify, compute
 from enums import Problem
@@ -8,7 +9,8 @@ import pandas as pd
 
 NUM_CORES = 8
 PROBLEM_MAP = {Problem.NETWORK_FLOW: NetworkFlow,
-               Problem.IMAGE_DEBLURRING: ImageDeblurring}
+               Problem.IMAGE_DEBLURRING: ImageDeblurring,
+               Problem.MAXCUT: Maxcut}
 
 def check_optimality(problem, solver, eps, solution):
     success = True

@@ -62,3 +62,9 @@ def get_random_network(n, p):
         capacity.append(np.random.randint(10, 30))
 
     return incidence_matrix, np.array(supply), np.array(cost), np.array(capacity)
+
+def get_random_weighted_graph(n, p):
+    random_graph = nx.erdos_renyi_graph(n, p)
+    for (u, v) in random_graph.edges():
+        random_graph[u][v]["weight"] = np.random.randint(0, 25)
+    return np.array(nx.laplacian_matrix(random_graph).toarray())

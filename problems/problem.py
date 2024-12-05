@@ -21,7 +21,7 @@ class Instance(ABC):
             raise Exception(f"Problem not yet canonicalized!")
         
         solve = maps.get_solve_map()[solver]
-        problem = (self.n, self.P, self.q, self.D, self.b, self.cones)
+        problem = (self.n, self.m, self.P, self.q, self.D, self.b, self.cones)
         solution_tuple = solve(*problem, verbose)
         self.solutions[solver] = Solution(solver, self.constant_objective, *solution_tuple)
         return self.solutions[solver]

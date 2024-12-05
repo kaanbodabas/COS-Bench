@@ -12,9 +12,10 @@ class NetworkFlow(problem.Instance):
         self.t = t
         self.c = c
         self.u = u
+        self.d = len(self.t)
 
         self.n = len(self.c)
-        self.m = len(self.t)
+        self.m = None
 
         self.P = None
         self.q = None
@@ -27,13 +28,13 @@ class NetworkFlow(problem.Instance):
         self.solutions = {}
 
     def solve_original_in_cvxpy(self, verbose=False):
-        x = cp.Variable(self.n)
-        objective = self.c.T @ x
-        constraints = [self.A @ x == self.t, x >= 0, x <= self.u]
+        y = cp.Variable(self.n)
+        objective = self.c.T @ y
+        constraints = [self.A @ y == self.t, y >= 0, y <= self.u]
         problem = cp.Problem(cp.Minimize(objective), constraints)
 
         optimal_value = problem.solve(verbose=verbose)
-        optimal_solution = x.value
+        optimal_solution = y.value
         dual_solution = [constraint.dual_value for constraint in constraints]
         solve_time = problem.solver_stats.solve_time
         status = problem.status
@@ -52,6 +53,8 @@ class NetworkFlow(problem.Instance):
 
         self.b = np.hstack([self.t, np.zeros(self.n), self.u])
 
-        self.cones = [clarabel.ZeroConeT(self.m), clarabel.NonnegativeConeT(2 * self.n)]
+        self.cones = [(self.d, clarabel.ZeroConeT(self.d)),
+                      (2 * self.n, clarabel.NonnegativeConeT(2 * self.n))]
+        self.m = self.d + 2 * self.n
 
         self.constant_objective = 0

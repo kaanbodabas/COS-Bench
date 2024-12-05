@@ -11,6 +11,8 @@ import scs
 
 ZERO_CONE = "ZeroConeT"
 NONNEGATIVE_CONE = "NonnegativeConeT"
+SECOND_ORDER_CONE = "SecondOrderConeT"
+PSD_TRIANGLE_CONE = "PyPSDTriangleConeT"
 TIME_LIMIT = 600
 SOLVED = "solution returned"
 SOLUTION_RETURNED = ["optimal", "optimal_inaccurate",
@@ -20,32 +22,37 @@ SOLUTION_RETURNED = ["optimal", "optimal_inaccurate",
                      "solved", "solved inaccurate",
                      solve_log_pb2.TerminationReason.TERMINATION_REASON_OPTIMAL]
 
-def parse_cones(cones):
-    m = 0
-    cone_infos = []
-    for cone in cones:
-        name = str(cone)
-        m += cone.dim
-        if name == ZERO_CONE + f"({cone.dim})":
-            cone_infos.append((cone.dim, ZERO_CONE)) 
-        elif name == NONNEGATIVE_CONE + f"({cone.dim})":
-            cone_infos.append((cone.dim, NONNEGATIVE_CONE))
-        else:
-            raise Exception(f"Cone {cone} not supported!")
-    return m, cone_infos
+# column-major order version of cp.vec_to_upper_tri
+def vec_to_upper_tri(s, n, d):
+    rows, cols = np.tril_indices(d)
+    A_rows = rows + d * cols
+    A_cols = np.arange(n)
+    A_vals = np.ones(A_cols.size)
+    A = sparse.csc_matrix((A_vals, (A_rows, A_cols)), shape=(d * d, n))
+    return cp.reshape(A @ s, (d, d), order='F').T
 
-def with_cvxpy(n, P, q, D, b, cones, verbose):
-    y = cp.Variable(n)
-    m, cone_infos = parse_cones(cones) 
+def with_cvxpy(n, m, P, q, D, b, cones, verbose):
+    y = cp.Variable(n) 
     s = cp.Variable(m)
     objective = 0.5 * cp.quad_form(y, cp.psd_wrap(P)) + q @ y
     constraints = [D @ y + s == b]
-    for (dim, cone) in cone_infos:
-        for i in range(dim):
-            if cone == ZERO_CONE:
-                constraints += [s[i] == 0]
-            elif cone == NONNEGATIVE_CONE:
-                constraints += [s[i] >= 0]
+    i = 0
+    for (dim, cone) in cones:
+        cone = str(cone)
+        if ZERO_CONE in cone:
+            constraints.append(s[i:i + dim] == 0)
+        elif NONNEGATIVE_CONE in cone:
+            constraints.append(s[i:i + dim] >= 0)
+        elif SECOND_ORDER_CONE in cone:
+            constraints.append(cp.norm(s[i + 1:i + dim], 2) <= s[i])
+        elif PSD_TRIANGLE_CONE in cone:
+            d = int(cone[len(PSD_TRIANGLE_CONE):].strip("()"))
+            S = vec_to_upper_tri(s[i:i + dim], n, d)
+            diag = cp.diag(cp.diag(S))
+            S = (S - diag) / np.sqrt(2) + diag
+            S = S + S.T - diag
+            constraints.append(S >> 0)
+        i += dim
     problem = cp.Problem(cp.Minimize(objective), constraints)
 
     optimal_value = problem.solve(verbose=verbose)
@@ -59,12 +66,11 @@ def with_cvxpy(n, P, q, D, b, cones, verbose):
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)
     
-
-def with_clarabel(n, P, q, D, b, cones, verbose):
+def with_clarabel(n, m, P, q, D, b, cones, verbose):
     settings = clarabel.DefaultSettings()
     settings.verbose = verbose
     settings.time_limit = TIME_LIMIT
-    problem = clarabel.DefaultSolver(P, q, D, b, cones, settings)
+    problem = clarabel.DefaultSolver(P, q, D, b, [cone[1] for cone in cones], settings)
     solution = problem.solve()
     
     status = solution.status
@@ -78,24 +84,27 @@ def with_clarabel(n, P, q, D, b, cones, verbose):
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)
 
-def with_gurobi(n, P, q, D, b, cones, verbose):
+def with_gurobi(n, m, P, q, D, b, cones, verbose):
     env = gp.Env(empty=True)
     env.setParam("OutputFlag", int(verbose))
     env.setParam("TimeLimit", TIME_LIMIT)
     env.start()
     model = gp.Model("qp", env)
-    y = model.addMVar(shape=n, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
-    m, cone_infos = parse_cones(cones) 
+    y = model.addMVar(shape=n, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY) 
     s = model.addMVar(shape=m, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
     objective = 0.5 * y @ P @ y + q @ y
     model.setObjective(objective)
     constraint = model.addConstr(D @ y + s == b)
-    for (dim, cone) in cone_infos:
-        for i in range(dim):
-            if cone == ZERO_CONE:
-                model.addConstr(s[i] == 0)
-            elif cone == NONNEGATIVE_CONE:
-                model.addConstr(s[i] >= 0)
+    i = 0
+    for (dim, cone) in cones:
+        cone = str(cone)
+        if ZERO_CONE in cone:
+            model.addConstr(s[i:i + dim] == 0)
+        elif NONNEGATIVE_CONE in cone:
+            model.addConstr(s[i:i + dim] >= 0)
+        elif SECOND_ORDER_CONE in cone:
+            model.addConstr(gp.norm(s[i + 1:i + dim], 2) <= s[i])
+        i += dim
     model.optimize()
 
     status = model.Status
@@ -109,31 +118,35 @@ def with_gurobi(n, P, q, D, b, cones, verbose):
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)
 
-def with_mosek(n, P, q, D, b, cones, verbose):
+def with_mosek(n, m, P, q, D, b, cones, verbose):
     env = mosek.Env()
     task = env.Task()
     task.putintparam(mosek.iparam.log, int(verbose))
     task.putdouparam(mosek.dparam.optimizer_max_time, TIME_LIMIT)
-    m, cone_infos = parse_cones(cones)
     task.appendcons(m)
     task.appendvars(n + m)
-    for j in range(n):
-        task.putcj(j, q[j])
-        task.putvarbound(j, mosek.boundkey.fr, -np.inf, np.inf)
+    task.putclist(list(range(n)), q)
+    task.putvarboundsliceconst(0, n, mosek.boundkey.fr, -np.inf, np.inf)
     P = sparse.tril(P, format="coo")
     task.putqobj(P.row, P.col, P.data)
     stacked_D = sparse.hstack([D, sparse.identity(m)])
     task.putaijlist(*sparse.find(stacked_D))
-    for j in range(m):
-        task.putconbound(j, mosek.boundkey.fx, b[j], b[j])
-    j = 0
-    for (dim, cone) in cone_infos:
-        for i in range(n + j, n + j + dim):
-            if cone == ZERO_CONE:
-                task.putvarbound(i, mosek.boundkey.fx, 0, 0)
-            elif cone == NONNEGATIVE_CONE:
-                task.putvarbound(i, mosek.boundkey.lo, 0, np.inf)
-        j += dim
+    task.putconboundslice(0, m, [mosek.boundkey.fx] * m, b, b)
+    i = 0
+    for (dim, cone) in cones:
+        cone = str(cone)
+        if ZERO_CONE in cone:
+            task.putvarboundsliceconst(n + i, n + i + dim, mosek.boundkey.fx, 0, 0)
+        elif NONNEGATIVE_CONE in cone:
+            task.putvarboundsliceconst(n + i, n + i + dim, mosek.boundkey.lo, 0, np.inf)
+        elif SECOND_ORDER_CONE in cone:
+            task.putvarboundsliceconst(n + i, n + i + dim, mosek.boundkey.fr, -np.inf, np.inf)
+            domain = task.appendquadraticconedomain(dim)
+            task.appendacc(domain, list(range(n + i, n + i + dim)), None)
+        elif PSD_TRIANGLE_CONE in cone:
+            # TODO
+            pass
+        i += dim
     task.putobjsense(mosek.objsense.minimize)
     task.optimize()
 
@@ -149,8 +162,7 @@ def with_mosek(n, P, q, D, b, cones, verbose):
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)
 
-def with_osqp(n, P, q, D, b, cones, verbose):
-    m, cone_infos = parse_cones(cones)
+def with_osqp(n, m, P, q, D, b, cones, verbose):
     stacked_P = sparse.block_diag([P, np.zeros((m, m))], format="csc")
     stacked_q = np.hstack([q, np.zeros(m)])
     stacked_D = sparse.vstack([
@@ -158,14 +170,14 @@ def with_osqp(n, P, q, D, b, cones, verbose):
         sparse.hstack([np.zeros((m, n)), sparse.identity(m)])], format="csc")
     cone_lb = []
     cone_ub = []
-    for (dim, cone) in cone_infos:
-        for _ in range(dim):
-            if cone == ZERO_CONE:
-                cone_lb.append(0)
-                cone_ub.append(0)
-            elif cone == NONNEGATIVE_CONE:
-                cone_lb.append(0)
-                cone_ub.append(np.inf)
+    for (dim, cone) in cones:
+        cone = str(cone)
+        if ZERO_CONE in cone:
+            cone_lb.extend(np.zeros(dim))
+            cone_ub.extend(np.zeros(dim))
+        elif NONNEGATIVE_CONE in cone:
+            cone_lb.extend(np.zeros(dim))
+            cone_ub.extend(np.inf * np.ones(dim))
     lb = np.hstack([b, cone_lb])
     ub = np.hstack([b, cone_ub])
     problem = osqp.OSQP()
@@ -184,9 +196,8 @@ def with_osqp(n, P, q, D, b, cones, verbose):
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)
 
-def with_pdlp(n, P, q, D, b, cones, verbose):
+def with_pdlp(n, m, P, q, D, b, cones, verbose):
     problem = pdlp.QuadraticProgram()
-    m, cone_infos = parse_cones(cones)
     problem.objective_vector = np.hstack([q, np.zeros(m)])
     problem.variable_lower_bounds = -np.inf * np.ones(n + m)
     problem.variable_upper_bounds = np.inf * np.ones(n + m)
@@ -195,14 +206,14 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
         sparse.hstack([np.zeros((m, n)), sparse.identity(m)])], format="csc")
     cone_lb = []
     cone_ub = []
-    for (dim, cone) in cone_infos:
-        for _ in range(dim):
-            if cone == ZERO_CONE:
-                cone_lb.append(0)
-                cone_ub.append(0)
-            elif cone == NONNEGATIVE_CONE:
-                cone_lb.append(0)
-                cone_ub.append(np.inf)
+    for (dim, cone) in cones:
+        cone = str(cone)
+        if ZERO_CONE in cone:
+            cone_lb.extend(np.zeros(dim))
+            cone_ub.extend(np.zeros(dim))
+        elif NONNEGATIVE_CONE in cone:
+            cone_lb.extend(np.zeros(dim))
+            cone_ub.extend(np.inf * np.ones(dim))
     lb = np.hstack([b, cone_lb])
     ub = np.hstack([b, cone_ub])
     problem.constraint_lower_bounds = lb
@@ -223,8 +234,7 @@ def with_pdlp(n, P, q, D, b, cones, verbose):
                 dual_solution, solve_time, SOLVED)
     return (None, None, None, None, TIME_LIMIT, status)
 
-def with_scs(n, P, q, D, b, cones, verbose):
-    m, cone_infos = parse_cones(cones)
+def with_scs(n, m, P, q, D, b, cones, verbose):
     stacked_P = sparse.block_diag([P, np.zeros((m, m))], format="csc")
     stacked_q = np.hstack([q, np.zeros(m)])
     stacked_D = sparse.vstack([
@@ -232,14 +242,21 @@ def with_scs(n, P, q, D, b, cones, verbose):
         sparse.hstack([np.zeros((m, n)), -sparse.identity(m)])], format="csc")
     z = 0
     l = 0
-    for (dim, cone) in cone_infos:
-        if cone == ZERO_CONE:
+    q_array = []
+    for (dim, cone) in cones:
+        cone = str(cone)
+        if ZERO_CONE in cone:
             z += dim
-        elif cone == NONNEGATIVE_CONE:
+        elif NONNEGATIVE_CONE in cone:
             l += dim
+        elif SECOND_ORDER_CONE in cone:
+            q_array.append(dim)
+        elif PSD_TRIANGLE_CONE in cone:
+            # TODO
+            pass
     ub = np.hstack([b, np.zeros(m)])
     data = dict(P=stacked_P, A=stacked_D, b=ub, c=stacked_q)
-    cone = dict(z=m + z, l=l)
+    cone = dict(z=m + z, l=l, q=q_array)
     problem = scs.SCS(data, cone, verbose=verbose, time_limit_secs=TIME_LIMIT)
     solution = problem.solve()
 

@@ -13,6 +13,7 @@ class ImageDeblurring(problem.Instance):
         self.rho = rho
 
         self.n = len(x)
+        self.m = None
 
         self.P = None
         self.q = None
@@ -50,6 +51,7 @@ class ImageDeblurring(problem.Instance):
         
         self.b = np.hstack([np.ones(self.n), np.zeros(self.n)])
         
-        self.cones = [clarabel.NonnegativeConeT(2 * self.n)]
+        self.cones = [(2 * self.n, clarabel.NonnegativeConeT(2 * self.n))]
+        self.m = 2 * self.n
 
         self.constant_objective = self.x.T @ self.x
