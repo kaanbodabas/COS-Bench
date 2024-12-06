@@ -9,7 +9,7 @@ def get_solvers(problem_class):
     elif problem_class == "SOCP":
         return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.SCS] # Solver.COPT]
     elif problem_class == "SDP":
-        return [Solver.CVXPY, Solver.CLARABEL] #, Solver.MOSEK, Solver.SCS] # Solver.SDPA, Solver.COPT]
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.MOSEK, Solver.SCS] # Solver.SDPA, Solver.COPT]
     else:
         raise Exception("Problem class {problem_class} not supported!")
 

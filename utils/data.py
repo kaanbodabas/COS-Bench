@@ -22,8 +22,8 @@ def get_2D_blur_matrix(m, n, width):
     blur_rows = get_blur_matrix(n, width)
     return np.kron(blur_rows, blur_cols)
 
-def get_rho_range(n, lb, ub):
-    pass
+def get_rho_range(lb, ub, n):
+    return np.linspace(lb, ub, n)
 
 def get_random_network(n, p):
     G = nx.DiGraph()

@@ -100,7 +100,7 @@ def plot_average_solve_times(solvers, solutions_df, num_instances, title):
     bars = plt.bar([key.value for key in averages.keys()], averages.values())
     for bar in bars:
         height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2, height, str(round(height, 2)), ha="center", va="bottom")
+        plt.text(bar.get_x() + bar.get_width() / 2, height, str(round(height, 3)), ha="center", va="bottom")
     plt.ylabel("Time in Seconds")
     plt.title(title + AVERAGE_SOLVE_TIMES)
     plt.show()

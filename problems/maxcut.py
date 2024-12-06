@@ -13,25 +13,25 @@ def vec_for_inner_product(C):
         c[i][i] /= 2
     return c[np.tril_indices(d)]
     
+def triu_identity(d, n):
+    A = np.zeros((d, n))
+    j = 0
+    for i in range(d):
+        A[i][j] = 1
+        j += i + 2
+    return A
+
 def to_vec(n):
-    A = np.zeros((n, n))
+    B = np.zeros((n, n))
     j = 0
     diag = [0]
     for i in range(n):
         if i in diag:
-            A[i][i] = 1
+            B[i][i] = 1
         else:
-            A[i][i] = np.sqrt(2)
+            B[i][i] = np.sqrt(2)
         j += i + 2
         diag.append(j)
-    return A
-
-def triu_identity(d, n):
-    B = np.zeros((d, n))
-    j = 0
-    for i in range(d):
-        B[i][j] = 1
-        j += i + 2
     return B
 
 class Maxcut(problem.Instance):
@@ -75,12 +75,12 @@ class Maxcut(problem.Instance):
 
         self.q = -vec_for_inner_product(self.C)
 
-        self.D = sparse.vstack([-to_vec(self.n), triu_identity(self.d, self.n)]).tocsc()
+        self.D = sparse.vstack([triu_identity(self.d, self.n), -to_vec(self.n)]).tocsc()
 
-        self.b = np.hstack([np.zeros(self.n), np.ones(self.d)])
+        self.b = np.hstack([np.ones(self.d), np.zeros(self.n)])
 
-        self.cones = [(self.n, clarabel.PSDTriangleConeT(self.d)),
-                      (self.d, clarabel.ZeroConeT(self.d))]
+        self.cones = [(self.d, clarabel.ZeroConeT(self.d)),
+                      (self.d, clarabel.PSDTriangleConeT(self.d))]
         self.m = self.n + self.d
 
         self.constant_objective = 0

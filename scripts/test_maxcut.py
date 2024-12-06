@@ -3,7 +3,7 @@ from enums import Problem
 
 solvers = maps.get_solvers("SDP")
 csv_filename = "maxcut"
-laplacian_matrices = [data.get_random_weighted_graph(30, 0.5)]
+laplacian_matrices = [data.get_random_weighted_graph(3, 0.5)]
 num_instances = 1
 plot_title = "Maxcut Solve Times"
 
