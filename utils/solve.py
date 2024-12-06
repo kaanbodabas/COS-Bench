@@ -151,6 +151,7 @@ def with_mosek(n, m, P, q, D, b, cones, verbose):
     task.putconboundslice(0, m, [mosek.boundkey.fx] * m, b, b)
     i = n
     j = 0
+    psd_info = None
     for (dim, cone) in cones:
         cone = str(cone)
         if ZERO_CONE in cone:
@@ -162,6 +163,7 @@ def with_mosek(n, m, P, q, D, b, cones, verbose):
             domain = task.appendquadraticconedomain(dim)
         elif PSD_TRIANGLE_CONE in cone:
             vec_dim = int(dim * (dim + 1) / 2)
+            psd_info = (vec_dim, dim)
             task.putvarboundsliceconst(i, i + vec_dim, mosek.boundkey.fr, -np.inf, np.inf)
             task.appendafes(vec_dim)
             F = send_upper_tri_vec_to_lower_tri_vec(vec_dim, dim, Solver.MOSEK)
@@ -179,7 +181,12 @@ def with_mosek(n, m, P, q, D, b, cones, verbose):
         optimal_value = task.getprimalobj(mosek.soltype.itr)
         optimal_solution = np.array(task.getxxslice(mosek.soltype.itr, 0, n))
         primal_slacks = np.array(task.getxxslice(mosek.soltype.itr, n, n + m))
-        dual_solution = -np.array(task.getyslice(mosek.soltype.itr, 0, m))
+        dual_solution = -np.array(task.gety(mosek.soltype.itr))
+        if psd_info is not None:
+            vec_dim, dim = psd_info
+            F = send_upper_tri_vec_to_lower_tri_vec(vec_dim, dim, None)
+            dual_solution = np.append(dual_solution[:m - vec_dim],
+                                      F.T @ (dual_solution[m - vec_dim:] + (np.array(task.getaccdotys(mosek.soltype.itr)))))
         solve_time = task.getdouinf(mosek.dinfitem.optimizer_time)
         return (optimal_value, optimal_solution, primal_slacks,
                 dual_solution, solve_time, SOLVED)

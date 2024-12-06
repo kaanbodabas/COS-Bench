@@ -1,5 +1,5 @@
 ,Solver,Solve Time,Success
-0,CVXPY,0.0,True
-1,CLARABEL,0.0002723,True
-2,MOSEK,0.0,False
-3,SCS,0.0001831,True
+0,CVXPY,0.094,True
+1,CLARABEL,0.937231,True
+2,MOSEK,0.109,True
+3,SCS,1.004261,True
