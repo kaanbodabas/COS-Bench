@@ -3,6 +3,7 @@ from utils import verify, compute
 from constants import NUM_CORES
 from tqdm import tqdm
 import pandas as pd
+import os
 
 def check_optimality(problem, solver, eps, solution):
     success = True
@@ -34,6 +35,8 @@ def start(solvers, csv_filename, problem_class, problem_data, eps=(10**-3, 10**-
         results = Parallel(num_jobs)(delayed(parse_instances)(instance) for instance in zip(*problem_data))
         solutions.extend(results)
 
+    if not os.path.exists("output"):
+        os.makedirs("output")
     pd.DataFrame(solutions, dtype=object).to_csv(f"output/{csv_filename}.csv")
 
 def results(csv_filename, solvers, num_instances, plot_title):
