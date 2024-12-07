@@ -63,8 +63,8 @@ def solve(n, m, P, q, D, b, cones, verbose):
     status = task.getsolsta(mosek.soltype.itr)
     if status in SOLVED_STATUS:
         optimal_value = task.getprimalobj(mosek.soltype.itr)
-        optimal_solution = np.array(task.getxxslice(mosek.soltype.itr, 0, n))
-        primal_slacks = np.array(task.getxxslice(mosek.soltype.itr, n, n + m))
+        optimal_solution = task.getxxslice(mosek.soltype.itr, 0, n)
+        primal_slacks = task.getxxslice(mosek.soltype.itr, n, n + m)
         dual_solution = -np.array(task.gety(mosek.soltype.itr))
         cone_dual_solution = np.array(task.getaccdotys(mosek.soltype.itr))
         for soc_info in soc_infos:

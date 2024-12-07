@@ -4,7 +4,6 @@ from constants import NUM_CORES
 from tqdm import tqdm
 import pandas as pd
 
-
 def check_optimality(problem, solver, eps, solution):
     success = True
     if not verify.is_solution_optimal(problem, solver, eps):
