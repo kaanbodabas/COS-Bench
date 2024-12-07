@@ -20,9 +20,9 @@ class Instance(ABC):
         if self.P is None:
             raise Exception(f"Problem not yet canonicalized!")
         
-        solve = maps.get_solve_map()[solver]
+        solver_class = maps.get_solver_map()[solver]
         problem = (self.n, self.m, self.P, self.q, self.D, self.b, self.cones)
-        solution_tuple = solve(*problem, verbose)
+        solution_tuple = solver_class.solve(*problem, verbose)
         self.solutions[solver] = Solution(solver, self.constant_objective, *solution_tuple)
         return self.solutions[solver]
     

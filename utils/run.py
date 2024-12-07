@@ -1,18 +1,9 @@
-from problems.facility_location import FacilityLocation
-from problems.image_deblurring import ImageDeblurring
-from problems.network_flow import NetworkFlow
-from problems.maxcut import Maxcut
 from joblib import Parallel, delayed
 from utils import verify, compute
-from enums import Problem
+from constants import NUM_CORES
 from tqdm import tqdm
 import pandas as pd
 
-NUM_CORES = 8
-PROBLEM_MAP = {Problem.NETWORK_FLOW: NetworkFlow,
-               Problem.IMAGE_DEBLURRING: ImageDeblurring,
-               Problem.FACILITY_LOCATION: FacilityLocation,
-               Problem.MAXCUT: Maxcut}
 
 def check_optimality(problem, solver, eps, solution):
     success = True
@@ -21,7 +12,7 @@ def check_optimality(problem, solver, eps, solution):
         success = False
     return {"Solver": solver, "Solve Time": solution.solve_time, "Success": success}
 
-def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3, 10**-3)):
+def start(solvers, csv_filename, problem_class, problem_data, eps=(10**-3, 10**-3, 10**-3), verbose=False):
     solutions = []
     loading_bar = tqdm(solvers)
     for solver in loading_bar:
@@ -29,13 +20,12 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
         print()
 
         def parse_instances(instance):
-            problem_class = PROBLEM_MAP[problem_type]
             problem = problem_class(*instance)
             problem.canonicalize()
-            solution = problem.solve(solver)
+            solution = problem.solve(solver, verbose)
 
             # optional to confirm valid reformulation
-            original_cvxpy_solution = problem.solve_original_in_cvxpy()
+            original_cvxpy_solution = problem.solve_original_in_cvxpy(verbose)
             print("Original:", original_cvxpy_solution.optimal_value)
             print("Reformulated:", solution.optimal_value + solution.constant_objective)
 

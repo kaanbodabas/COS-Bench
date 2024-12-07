@@ -1,0 +1,6 @@
+NUM_CORES = 8
+TIME_LIMIT = 600
+ZERO_CONE = "ZeroConeT"
+NONNEGATIVE_CONE = "NonnegativeConeT"
+SECOND_ORDER_CONE = "SecondOrderConeT"
+PSD_TRIANGLE_CONE = "PyPSDTriangleConeT"

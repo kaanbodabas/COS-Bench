@@ -13,9 +13,3 @@ class Solver(Enum):
 
     def __str__(self):
         return self.value
-
-class Problem(Enum):
-    NETWORK_FLOW = "Network Flow"
-    IMAGE_DEBLURRING = "Image Deblurring"
-    FACILITY_LOCATION = "Facility Location"
-    MAXCUT = "Maxcut"
