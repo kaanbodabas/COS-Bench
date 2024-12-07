@@ -1,0 +1,5 @@
+,Solver,Solve Time,Success
+0,CVXPY,5.26e-05,True
+1,CLARABEL,9.78e-05,True
+2,MOSEK,0.0,False
+3,SCS,1.7999999999999997e-05,True

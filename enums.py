@@ -17,4 +17,5 @@ class Solver(Enum):
 class Problem(Enum):
     NETWORK_FLOW = "Network Flow"
     IMAGE_DEBLURRING = "Image Deblurring"
+    FACILITY_LOCATION = "Facility Location"
     MAXCUT = "Maxcut"

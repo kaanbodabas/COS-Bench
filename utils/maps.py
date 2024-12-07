@@ -3,13 +3,13 @@ from utils import solve
 
 def get_solvers(problem_class):
     if problem_class == "LP":
-        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.OSQP, Solver.PDLP, Solver.SCS] # Solver.SDPA, Solver.COPT]
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.OSQP, Solver.PDLP, Solver.SCS] # Solver.COPT]
     elif problem_class == "QP":
         return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.OSQP, Solver.SCS] # Solver.COPT]
     elif problem_class == "SOCP":
-        return [Solver.CVXPY, Solver.CLARABEL, Solver.GUROBI, Solver.MOSEK, Solver.SCS] # Solver.COPT]
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.MOSEK, Solver.SCS] # Solver.COPT]
     elif problem_class == "SDP":
-        return [Solver.CVXPY, Solver.CLARABEL, Solver.MOSEK, Solver.SCS] # Solver.SDPA, Solver.COPT]
+        return [Solver.CVXPY, Solver.CLARABEL, Solver.MOSEK, Solver.SCS] # Solver.COPT]
     else:
         raise Exception("Problem class {problem_class} not supported!")
 

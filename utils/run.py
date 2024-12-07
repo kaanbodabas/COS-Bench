@@ -1,3 +1,4 @@
+from problems.facility_location import FacilityLocation
 from problems.image_deblurring import ImageDeblurring
 from problems.network_flow import NetworkFlow
 from problems.maxcut import Maxcut
@@ -10,6 +11,7 @@ import pandas as pd
 NUM_CORES = 8
 PROBLEM_MAP = {Problem.NETWORK_FLOW: NetworkFlow,
                Problem.IMAGE_DEBLURRING: ImageDeblurring,
+               Problem.FACILITY_LOCATION: FacilityLocation,
                Problem.MAXCUT: Maxcut}
 
 def check_optimality(problem, solver, eps, solution):
@@ -33,9 +35,9 @@ def start(solvers, csv_filename, problem_type, problem_data, eps=(10**-3, 10**-3
             solution = problem.solve(solver)
 
             # optional to confirm valid reformulation
-            print("Reformulated:", solution.optimal_value + solution.constant_objective)
             original_cvxpy_solution = problem.solve_original_in_cvxpy()
             print("Original:", original_cvxpy_solution.optimal_value)
+            print("Reformulated:", solution.optimal_value + solution.constant_objective)
 
             return check_optimality(problem, solver, eps, solution)
 

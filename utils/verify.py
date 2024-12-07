@@ -29,7 +29,6 @@ def is_solution_optimal(problem, solver, eps):
         return la.norm(dual_residual, 2) < eps_dual * relative_term
 
     def is_duality_gap_small():
-        # TODO
         if solver == Solver.OSQP:
             return True
         primal_objective = solution.optimal_value

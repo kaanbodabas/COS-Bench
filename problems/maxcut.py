@@ -81,6 +81,6 @@ class Maxcut(problem.Instance):
 
         self.cones = [(self.d, clarabel.ZeroConeT(self.d)),
                       (self.d, clarabel.PSDTriangleConeT(self.d))]
-        self.m = self.n + self.d
+        self.m = self.d + self.n
 
         self.constant_objective = 0

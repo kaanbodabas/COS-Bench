@@ -10,18 +10,21 @@ import mosek
 import osqp
 import scs
 
+# cones must be in this order
+
 ZERO_CONE = "ZeroConeT"
 NONNEGATIVE_CONE = "NonnegativeConeT"
 SECOND_ORDER_CONE = "SecondOrderConeT"
 PSD_TRIANGLE_CONE = "PyPSDTriangleConeT"
 TIME_LIMIT = 600
 SOLVED = "solution returned"
-SOLUTION_RETURNED = ["optimal", "optimal_inaccurate",
+SOLUTION_RETURNED = [1, 2, "optimal", "optimal_inaccurate",
                      "Solved", "AlmostSolved",
-                     gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL,
-                     mosek.solsta.optimal, mosek.solsta.integer_optimal,
-                     "solved", "solved inaccurate",
-                     solve_log_pb2.TerminationReason.TERMINATION_REASON_OPTIMAL]
+                     "suboptimal",
+                     "integer_optimal",
+                     "solved", "solved inaccurate"]
+GUROBI_STATUS = {2: "optimal", 13: "suboptimal"}
+PDLP_STATUS = {1: "optimal"}
 
 # column-major order version of cp.vec_to_upper_tri
 def vec_to_upper_tri(s, n, d):
@@ -32,7 +35,7 @@ def vec_to_upper_tri(s, n, d):
     A = sparse.csc_matrix((A_vals, (A_rows, A_cols)), shape=(d * d, n))
     return cp.reshape(A @ s, (d, d), order='F').T
 
-def send_upper_tri_vec_to_lower_tri_vec(n, d, solver):
+def send_triu_vec_to_tril_vec(n, d, solver):
     upper_rows, upper_cols = np.triu_indices(d)
     lower_rows, lower_cols = np.tril_indices(d)
     X = np.zeros((n, n))
@@ -58,7 +61,6 @@ def with_cvxpy(n, m, P, q, D, b, cones, verbose):
         elif NONNEGATIVE_CONE in cone:
             constraints.append(s[i:i + dim] >= 0)
         elif SECOND_ORDER_CONE in cone:
-            # TODO
             constraints.append(cp.norm(s[i + 1:i + dim], 2) <= s[i])
         elif PSD_TRIANGLE_CONE in cone:
             vec_dim = int(dim * (dim + 1) / 2)
@@ -93,8 +95,10 @@ def with_clarabel(n, m, P, q, D, b, cones, verbose):
     if status in SOLUTION_RETURNED:
         optimal_value = solution.obj_val
         optimal_solution = solution.x
+        print(optimal_solution)
         primal_slacks = solution.s
         dual_solution = solution.z
+        print(dual_solution)
         solve_time = solution.solve_time
         return (optimal_value, optimal_solution, primal_slacks,
                 dual_solution, solve_time, SOLVED)
@@ -105,7 +109,7 @@ def with_gurobi(n, m, P, q, D, b, cones, verbose):
     env.setParam("OutputFlag", int(verbose))
     env.setParam("TimeLimit", TIME_LIMIT)
     env.start()
-    model = gp.Model("qp", env)
+    model = gp.Model(env=env)
     y = model.addMVar(shape=n, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY) 
     s = model.addMVar(shape=m, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
     objective = 0.5 * y @ P @ y + q @ y
@@ -120,12 +124,16 @@ def with_gurobi(n, m, P, q, D, b, cones, verbose):
             model.addConstr(s[i:i + dim] >= 0)
         elif SECOND_ORDER_CONE in cone:
             # TODO
-            model.addConstr(gp.norm(s[i + 1:i + dim], 2) <= s[i])
+            aux = model.addVar(lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
+            model.addGenConstrNorm(aux, s[i + 1:i + dim], 2)
+            model.addConstr(aux <= s[i])
+            # norm_squared = gp.quicksum([s[j] ** 2 for j in range(i + 1, i + dim)])
+            # model.addConstr(norm_squared <= s[i] ** 2)
         i += dim
     model.optimize()
 
     status = model.Status
-    if status in SOLUTION_RETURNED:
+    if GUROBI_STATUS[status] in SOLUTION_RETURNED:
         optimal_value = model.ObjVal
         optimal_solution = y.X
         primal_slacks = s.X
@@ -151,7 +159,8 @@ def with_mosek(n, m, P, q, D, b, cones, verbose):
     task.putconboundslice(0, m, [mosek.boundkey.fx] * m, b, b)
     i = n
     j = 0
-    psd_info = None
+    soc_infos = []
+    psd_infos = []
     for (dim, cone) in cones:
         cone = str(cone)
         if ZERO_CONE in cone:
@@ -160,14 +169,23 @@ def with_mosek(n, m, P, q, D, b, cones, verbose):
             task.putvarboundsliceconst(i, i + dim, mosek.boundkey.lo, 0, np.inf)
         elif SECOND_ORDER_CONE in cone:
             # TODO
+            soc_infos.append((i - n, j, dim))
+            task.putvarboundsliceconst(i, i + dim, mosek.boundkey.fr, -np.inf, np.inf)
+            task.appendafes(dim)
+            F = sparse.identity(dim)
+            rows, cols, vals = sparse.find(F)
+            task.putafefentrylist(rows + j, cols + j, vals)
             domain = task.appendquadraticconedomain(dim)
+            task.appendacc(domain, list(range(j, j + dim)), None)
+            j += dim
         elif PSD_TRIANGLE_CONE in cone:
             vec_dim = int(dim * (dim + 1) / 2)
-            psd_info = (vec_dim, dim)
+            psd_infos.append((i - n, j, vec_dim, dim))
             task.putvarboundsliceconst(i, i + vec_dim, mosek.boundkey.fr, -np.inf, np.inf)
             task.appendafes(vec_dim)
-            F = send_upper_tri_vec_to_lower_tri_vec(vec_dim, dim, Solver.MOSEK)
-            task.putafefentrylist(*sparse.find(F))
+            F = send_triu_vec_to_tril_vec(vec_dim, dim, Solver.MOSEK)
+            rows, cols, vals = sparse.find(F)
+            task.putafefentrylist(rows + j, cols + j, vals)
             domain = task.appendsvecpsdconedomain(vec_dim)
             task.appendacc(domain, list(range(j, j + vec_dim)), None)
             j += vec_dim
@@ -182,11 +200,14 @@ def with_mosek(n, m, P, q, D, b, cones, verbose):
         optimal_solution = np.array(task.getxxslice(mosek.soltype.itr, 0, n))
         primal_slacks = np.array(task.getxxslice(mosek.soltype.itr, n, n + m))
         dual_solution = -np.array(task.gety(mosek.soltype.itr))
-        if psd_info is not None:
-            vec_dim, dim = psd_info
-            F = send_upper_tri_vec_to_lower_tri_vec(vec_dim, dim, None)
-            dual_solution = np.append(dual_solution[:m - vec_dim],
-                                      F.T @ (dual_solution[m - vec_dim:] + (np.array(task.getaccdotys(mosek.soltype.itr)))))
+        cone_dual_solution = np.array(task.getaccdotys(mosek.soltype.itr))
+        for soc_info in soc_infos:
+            i, j, dim = soc_info
+            dual_solution[i:i + dim] += cone_dual_solution[j:j + dim]
+        for psd_info in psd_infos:
+            i, j, vec_dim, dim = psd_info
+            F = send_triu_vec_to_tril_vec(vec_dim, dim, None)
+            dual_solution[i:i + vec_dim] = F.T @ (dual_solution[i:i + vec_dim] + cone_dual_solution[j:j + vec_dim])
         solve_time = task.getdouinf(mosek.dinfitem.optimizer_time)
         return (optimal_value, optimal_solution, primal_slacks,
                 dual_solution, solve_time, SOLVED)
@@ -254,7 +275,7 @@ def with_pdlp(n, m, P, q, D, b, cones, verbose):
     solution = pdlp.primal_dual_hybrid_gradient(problem, settings)
     
     status = solution.solve_log.termination_reason
-    if status in SOLUTION_RETURNED:
+    if PDLP_STATUS[status] in SOLUTION_RETURNED:
         optimal_value = solution.solve_log.solution_stats.convergence_information[0].primal_objective
         optimal_solution = solution.primal_solution[:n]
         primal_slacks = solution.primal_solution[n:]
@@ -283,12 +304,11 @@ def with_scs(n, m, P, q, D, b, cones, verbose):
         elif NONNEGATIVE_CONE in cone:
             l += dim
         elif SECOND_ORDER_CONE in cone:
-            # TODO
             q_array.append(dim)
         elif PSD_TRIANGLE_CONE in cone:
             vec_dim = int(dim * (dim + 1) / 2)
             stacked_D = stacked_D.tolil()
-            stacked_D[i:i + vec_dim, j:j + vec_dim] = -send_upper_tri_vec_to_lower_tri_vec(vec_dim, dim, Solver.SCS)
+            stacked_D[i:i + vec_dim, j:j + vec_dim] = -send_triu_vec_to_tril_vec(vec_dim, dim, Solver.SCS)
             stacked_D = stacked_D.tocsc()
             s += dim
             dim = vec_dim
