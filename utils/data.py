@@ -25,7 +25,7 @@ def get_2D_blur_matrix(m, n, width):
 def get_rho_range(lb, ub, n):
     return np.linspace(lb, ub, n)
 
-def get_random_network(n, p):
+def get_random_network(n, p, supply_bound, cost_lb, cost_ub, capacity_lb, capacity_ub):
     G = nx.DiGraph()
     for i in range(n - 1):
         G.add_edge(i, i + 1)
@@ -39,9 +39,9 @@ def get_random_network(n, p):
     for node in range(n):
         net_degree = G.out_degree(node) - G.in_degree(node)
         if net_degree > 0:
-            supply.append(np.random.randint(0, 25))
+            supply.append(np.random.randint(0, supply_bound))
         elif net_degree < 0:
-            supply.append(-np.random.randint(0, 25))
+            supply.append(-np.random.randint(0, supply_bound))
         else:
             supply.append(0)
     extra = sum(supply)
@@ -58,13 +58,18 @@ def get_random_network(n, p):
     cost = []
     capacity = []
     for _, _ in G.edges():
-        cost.append(np.random.randint(0, 10))
-        capacity.append(np.random.randint(10, 30))
+        cost.append(np.random.randint(cost_lb, cost_ub))
+        capacity.append(np.random.randint(capacity_lb, capacity_ub))
 
     return incidence_matrix, np.array(supply), np.array(cost), np.array(capacity)
 
-def get_random_weighted_graph(n, p):
+def get_random_weighted_graph(n, p, weights_lb, weights_ub):
     random_graph = nx.erdos_renyi_graph(n, p)
     for (u, v) in random_graph.edges():
-        random_graph[u][v]["weight"] = np.random.randint(0, 25)
+        random_graph[u][v]["weight"] = np.random.randint(weights_lb, weights_ub)
     return np.array(nx.laplacian_matrix(random_graph).toarray())
+
+def get_random_returns(n):
+    u = 0.6 * np.linspace(1, 1 / n, n)
+    mu = 1 + 0.3 * np.linspace(1, 1 / n, n)
+    return -u, u, mu

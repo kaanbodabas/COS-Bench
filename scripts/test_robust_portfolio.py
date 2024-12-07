@@ -4,17 +4,12 @@ import numpy as np
 
 solvers = maps.get_solvers("SOCP")
 csv_filename = "robust_portfolio"
-n = 200
-mu = 1.05 + 0.3 * np.linspace(1, 1 / n, n)
-u_max = 0.05 + 0.6 * np.linspace(1, 1 / n, n)  # Uncertainty sets
-u_max[-1] = 0  # Cash no variability
-epsilon = 1e-3  # Risk parameter (probability of failure)
-alpha = 1.1 
-ls = np.array([-u_max])
-us = np.array([u_max])
+l, u, mu = data.get_random_returns(200)
+ls = np.array([l])
+us = np.array([u])
 mus = np.array([mu])
-alphas = [alpha]
-etas = [epsilon]
+alphas = [1.1]
+etas = [0.9]
 num_instances = 1
 plot_title = "Robust Portfolio Solve Times"
 
