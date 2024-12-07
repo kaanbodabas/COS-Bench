@@ -1,4 +1,0 @@
-,Solver,Solve Time,Success
-0,CVXPY,0.015,True
-1,CLARABEL,0.0020046,True
-2,SCS,0.0242775,True
