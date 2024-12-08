@@ -1,4 +1,5 @@
 import gurobipy as gp
+import numpy as np
 import constants
 
 SOLVED_STATUS = [2, 13]
@@ -22,12 +23,10 @@ def solve(n, m, P, q, D, b, cones, verbose):
         elif constants.NONNEGATIVE_CONE in cone:
             model.addConstr(s[i:i + dim] >= 0)
         elif constants.SECOND_ORDER_CONE in cone:
-            # TODO
-            aux = model.addVar(lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
-            model.addGenConstrNorm(aux, s[i + 1:i + dim], 2)
-            model.addConstr(aux <= s[i])
-            # norm_squared = gp.quicksum([s[j] ** 2 for j in range(i + 1, i + dim)])
-            # model.addConstr(norm_squared <= s[i] ** 2)
+            model.setParam("QCPDual", 1)
+            model.addConstr(s[i] >= 0)
+            norm_squared = gp.quicksum([s[j] ** 2 for j in range(i + 1, i + dim)])
+            model.addConstr(norm_squared <= s[i] ** 2)
         i += dim
     model.optimize()
 

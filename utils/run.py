@@ -25,9 +25,9 @@ def start(solvers, csv_filename, problem_class, problem_data, eps=(10**-3, 10**-
             solution = problem.solve(solver, verbose)
 
             # optional to confirm valid reformulation
-            original_cvxpy_solution = problem.solve_original_in_cvxpy(verbose)
-            print("Original:", original_cvxpy_solution.optimal_value)
-            print("Reformulated:", solution.optimal_value + solution.constant_objective)
+            # original_cvxpy_solution = problem.solve_original_in_cvxpy(verbose)
+            # print("Original:", original_cvxpy_solution.optimal_value)
+            # print("Reformulated:", solution.optimal_value + solution.constant_objective)
 
             return check_optimality(problem, solver, eps, solution)
 

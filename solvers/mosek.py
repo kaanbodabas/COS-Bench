@@ -34,7 +34,6 @@ def solve(n, m, P, q, D, b, cones, verbose):
         elif constants.NONNEGATIVE_CONE in cone:
             task.putvarboundsliceconst(i, i + dim, mosek.boundkey.lo, 0, np.inf)
         elif constants.SECOND_ORDER_CONE in cone:
-            # TODO
             soc_infos.append((i - n, j, dim))
             task.putvarboundsliceconst(i, i + dim, mosek.boundkey.fr, -np.inf, np.inf)
             task.appendafes(dim)

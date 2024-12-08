@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from solution import Solution
-from utils import maps
+import maps
 
 class Instance(ABC):
     @abstractmethod

@@ -1,17 +1,19 @@
 from problems.robust_portfolio import RobustPortfolio
-from utils import data, run, maps
+from utils import run
 import numpy as np
+import maps
 
 solvers = maps.get_solvers("SOCP")
 csv_filename = "robust_portfolio"
-l, u, mu = data.get_random_returns(200)
-ls = np.array([l])
-us = np.array([u])
-mus = np.array([mu])
-alphas = [1.1]
-etas = [0.9]
-num_instances = 1
-plot_title = "Robust Portfolio Solve Times"
+num_instances = 5
+u = 0.05 + 0.6 * np.linspace(1, 1 / 200, 200)
+mu = 1.05 + 0.3 * np.linspace(1, 1 / 200, 200)
+us = [u] * num_instances
+ls = [-u] * num_instances
+mus = [mu] * num_instances
+alphas = [1.1] * num_instances
+etas = np.linspace(0.001, 0.5, num_instances)
+plot_title = "Robust Portfolio"
 
 run.start(solvers, csv_filename, RobustPortfolio, (ls, us, mus, alphas, etas,))
 run.results(csv_filename, solvers, num_instances, plot_title)

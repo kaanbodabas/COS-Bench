@@ -38,7 +38,7 @@ def plot_normalized_geometric_means(solvers, solutions_df, title):
             mean = round(height, 2)
         plt.text(bar.get_x() + bar.get_width() / 2, height, str(mean), ha="center", va="bottom")
     plt.title(title + SHIFTED_GEOMETRIC_MEANS)
-    plt.show()
+    plt.savefig(f"output/{title + SHIFTED_GEOMETRIC_MEANS}")
     
 def performance_profiles(solvers, solver_times, num_instances, taus, num_taus):
     for p in range(num_instances):
@@ -74,7 +74,7 @@ def plot_performance_profiles(solvers, solutions_df, num_instances, title, num_t
     plt.title(title + PERFORMANCE_PROFILES)
     plt.legend()
     plt.grid()
-    plt.show()
+    plt.savefig(f"output/{title + PERFORMANCE_PROFILES}")
 
 def plot_failure_rates(solvers, solutions_df, num_instances, title):
     failure_rates = {}
@@ -88,7 +88,7 @@ def plot_failure_rates(solvers, solutions_df, num_instances, title):
         plt.text(bar.get_x() + bar.get_width() / 2, height, str(round(height, 4)), ha="center", va="bottom")
     plt.ylabel("Percent Failed")
     plt.title(title + FAILURE_RATES)
-    plt.show()
+    plt.savefig(f"output/{title + FAILURE_RATES}")
 
 def plot_average_solve_times(solvers, solutions_df, num_instances, title):
     averages = {}
@@ -103,4 +103,4 @@ def plot_average_solve_times(solvers, solutions_df, num_instances, title):
         plt.text(bar.get_x() + bar.get_width() / 2, height, str(round(height, 3)), ha="center", va="bottom")
     plt.ylabel("Time in Seconds")
     plt.title(title + AVERAGE_SOLVE_TIMES)
-    plt.show()
+    plt.savefig(f"output/{title + AVERAGE_SOLVE_TIMES}")

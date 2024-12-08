@@ -12,7 +12,7 @@ def get_emnist_training_images(amt, subset="letters"):
 def get_2D_blur_matrix(m, n, width):
 
     def get_blur_matrix(m, width):
-        half_length = int(np.ceil((width-1)/2))    
+        half_length = int(np.ceil((width - 1) / 2))    
         rows, cols = np.zeros(m), np.zeros(m)
         cols[:1 + half_length] = 1 / width
         rows[:1 + half_length] = 1 / width
@@ -21,9 +21,6 @@ def get_2D_blur_matrix(m, n, width):
     blur_cols = get_blur_matrix(m, width)
     blur_rows = get_blur_matrix(n, width)
     return np.kron(blur_rows, blur_cols)
-
-def get_rho_range(lb, ub, n):
-    return np.linspace(lb, ub, n)
 
 def get_random_network(n, p, supply_bound, cost_lb, cost_ub, capacity_lb, capacity_ub):
     G = nx.DiGraph()
@@ -68,8 +65,3 @@ def get_random_weighted_graph(n, p, weights_lb, weights_ub):
     for (u, v) in random_graph.edges():
         random_graph[u][v]["weight"] = np.random.randint(weights_lb, weights_ub)
     return np.array(nx.laplacian_matrix(random_graph).toarray())
-
-def get_random_returns(n):
-    u = 0.6 * np.linspace(1, 1 / n, n)
-    mu = 1 + 0.3 * np.linspace(1, 1 / n, n)
-    return -u, u, mu
