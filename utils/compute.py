@@ -79,7 +79,7 @@ def plot_performance_profiles(solvers, solutions_df, num_instances, title, num_t
 def plot_failure_rates(solvers, solutions_df, num_instances, title):
     failure_rates = {}
     for solver in solvers:
-        failure_rates[solver] = get_num_fails(solver, solutions_df) / num_instances
+        failure_rates[solver] = 100 * get_num_fails(solver, solutions_df) / num_instances
     
     plt.figure(figsize=(8, 6))
     bars = plt.bar([key.value for key in failure_rates.keys()], failure_rates.values())
