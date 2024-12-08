@@ -4,7 +4,7 @@ import maps
 
 solvers = maps.get_solvers("SDP")
 csv_filename = "maxcut"
-num_instances = 1
+num_instances = 100
 laplacian_matrices = []
 for _ in range(num_instances):
     laplacian_matrices.append(data.get_random_weighted_graph(30, 0.5, 0, 25))

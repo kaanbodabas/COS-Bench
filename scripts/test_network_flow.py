@@ -4,13 +4,13 @@ import maps
 
 solvers = maps.get_solvers("LP")
 csv_filename = "network_flow"
-num_instances = 2
+num_instances = 100
 incidence_matrices = []
 supplies = []
 costs = []
 capacities = []
 for _ in range(num_instances):
-    incidence_matrix, supply, cost, capacity = data.get_random_network(30, 0.5, 25, 0, 10, 0, 30)
+    incidence_matrix, supply, cost, capacity = data.get_random_network(30, 0.8, 25, 0, 10, 0, 30)
     incidence_matrices.append(incidence_matrix)
     supplies.append(supply)
     costs.append(cost)

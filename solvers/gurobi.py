@@ -1,12 +1,11 @@
 import gurobipy as gp
-import numpy as np
 import constants
 
 SOLVED_STATUS = [2, 13]
 
 def solve(n, m, P, q, D, b, cones, verbose):
     env = gp.Env(empty=True)
-    env.setParam("OutputFlag", int(verbose))
+    env.setParam("OutputFlag", verbose)
     env.setParam("TimeLimit", constants.TIME_LIMIT)
     env.start()
     model = gp.Model(env=env)

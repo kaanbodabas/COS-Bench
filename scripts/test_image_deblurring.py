@@ -5,7 +5,7 @@ import maps
 
 solvers = maps.get_solvers("QP")
 csv_filename = "image_deblurring"
-num_instances = 2
+num_instances = 100
 blur_matrices = [data.get_2D_blur_matrix(28, 28, 8)] * num_instances
 images = data.get_emnist_training_images(num_instances)
 rhos = np.logspace(-4, 3, num_instances)

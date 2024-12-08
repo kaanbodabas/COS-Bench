@@ -17,8 +17,8 @@ def start(solvers, csv_filename, problem_class, problem_data, eps=(10**-3, 10**-
     loading_bar = tqdm(solvers)
     for solver in loading_bar:
         loading_bar.set_description(f"Solving instances in {solver}")
-        print()
-
+        # print()
+        
         def parse_instances(instance):
             problem = problem_class(*instance)
             problem.canonicalize()

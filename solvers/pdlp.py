@@ -30,7 +30,7 @@ def solve(n, m, P, q, D, b, cones, verbose):
     problem.constraint_lower_bounds = lb
     problem.constraint_upper_bounds = ub
     settings = solvers_pb2.PrimalDualHybridGradientParams()
-    settings.verbosity_level = int(verbose)
+    settings.verbosity_level = verbose
     settings.termination_criteria.time_sec_limit = constants.TIME_LIMIT
     solution = pdlp.primal_dual_hybrid_gradient(problem, settings)
     

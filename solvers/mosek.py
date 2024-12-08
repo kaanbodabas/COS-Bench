@@ -12,7 +12,7 @@ SOLVED_STATUS = [mosek.solsta.optimal,
 def solve(n, m, P, q, D, b, cones, verbose):
     env = mosek.Env()
     task = env.Task()
-    task.putintparam(mosek.iparam.log, int(verbose))
+    task.putintparam(mosek.iparam.log, verbose)
     task.putdouparam(mosek.dparam.optimizer_max_time, constants.TIME_LIMIT)
     task.appendcons(m)
     task.appendvars(n + m)
