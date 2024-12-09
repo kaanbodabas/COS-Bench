@@ -6,6 +6,8 @@ PERFORMANCE_PROFILES = " Performance Profiles"
 FAILURE_RATES = " Failure Rates"
 AVERAGE_SOLVE_TIMES = " Average Solve Time"
 
+plt.rcParams.update({"font.size": 14})
+
 def get_solve_times(solver, solutions_df):
     return solutions_df[solutions_df["Solver"] == solver.value]["Solve Time"].to_numpy(dtype=float) + 0.001
 
