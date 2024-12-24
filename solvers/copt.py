@@ -1,3 +1,4 @@
+from scipy import sparse
 import coptpy as copt
 import numpy as np
 import constants
@@ -12,13 +13,6 @@ def solve(n, m, P, q, D, b, cones, verbose):
     model = env.createModel()
     model.setParam(copt.COPT.Param.Logging, verbose)
     model.setParam(copt.COPT.Param.TimeLimit, constants.TIME_LIMIT)
-    for (dim, cone) in cones:
-        # the experimental matrix modeling supports the needed psd 
-        # cone constraint however can cause inaccurate solutions,
-        # so restrict it to only where necessary
-        if constants.PSD_TRIANGLE_CONE in str(cone):
-            model.matrixmodelmode = "experimental"
-            break
     y = model.addMVar(shape=n, lb=-copt.COPT.INFINITY, ub=copt.COPT.INFINITY)
     s = model.addMVar(shape=m, lb=-copt.COPT.INFINITY, ub=copt.COPT.INFINITY)
     model.setObjective(0.5 * y @ P @ y + q @ y, sense=copt.COPT.MINIMIZE)
@@ -37,10 +31,14 @@ def solve(n, m, P, q, D, b, cones, verbose):
             rows, cols = np.tril_indices(dim)
             l = i
             for j, k in zip(rows, cols):
+                indicator = np.zeros((dim, dim))
+                indicator[j][k] = 1
+                indicator[k][j] = 1
+                indicator = model.addSparseMat(dim, *sparse.find(indicator))
                 if j != k:
-                    model.addConstr(np.sqrt(2) * S[j][k] == s[l])
+                    model.addConstr(np.sqrt(2) * indicator * S / 2 == s[l].item())
                 else:
-                    model.addConstr(S[j][k] == s[l])
+                    model.addConstr(indicator * S == s[l].item())
                 l += 1
             dim = int(dim * (dim + 1) / 2)
         i += dim

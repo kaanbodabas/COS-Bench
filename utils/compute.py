@@ -84,6 +84,7 @@ def plot_failure_rates(solvers, solutions_df, num_instances, title):
         failure_rates[solver] = 100 * get_num_fails(solver, solutions_df) / num_instances
     
     plt.figure(figsize=(8, 6))
+    plt.ylim(0, 100)
     bars = plt.bar([key.value for key in failure_rates.keys()], failure_rates.values())
     for bar in bars:
         height = bar.get_height()
