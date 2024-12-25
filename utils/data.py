@@ -8,7 +8,6 @@ def get_emnist_training_images(amt, subset="letters"):
     column_stacked_images = [image.flatten(order="F") for image in images]
     return np.array(column_stacked_images[:amt]) / 255
 
-# https://github.com/stellatogrp/data_driven_optimizer_guarantees/blob/main/opt_guarantees/examples/mnist.py
 def get_2D_blur_matrix(m, n, width):
 
     def get_blur_matrix(m, width):

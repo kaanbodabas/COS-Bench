@@ -8,7 +8,6 @@ class Solver(Enum):
     OSQP = "OSQP"
     PDLP = "PDLP"
     SCS = "SCS"
-    SDPA = "SPDA"
     COPT = "COPT"
 
     def __str__(self):
