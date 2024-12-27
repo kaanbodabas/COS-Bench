@@ -5,8 +5,8 @@ import emnist
 
 def get_emnist_training_images(amt, subset="letters"):
     images, _ = emnist.extract_training_samples(subset)
-    column_stacked_images = [image.flatten(order="F") for image in images]
-    return np.array(column_stacked_images[:amt]) / 255
+    column_stacked_images = np.array([image.flatten(order="F") for image in images]) / 255
+    return column_stacked_images[np.random.choice(len(column_stacked_images), amt, replace=False)]
 
 def get_2D_blur_matrix(m, n, width):
 

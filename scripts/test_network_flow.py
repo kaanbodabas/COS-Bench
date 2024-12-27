@@ -4,7 +4,7 @@ import maps
 
 solvers = maps.get_solvers("LP")
 csv_filename = "network_flow"
-num_instances = 100
+num_instances = 10000
 incidence_matrices = []
 supplies = []
 costs = []
@@ -17,5 +17,5 @@ for _ in range(num_instances):
     capacities.append(capacity)
 plot_title = "Network Flow"
 
-run.start(solvers, csv_filename, NetworkFlow, (incidence_matrices, supplies, costs, capacities))
+run.start(solvers, csv_filename, NetworkFlow, (incidence_matrices, supplies, costs, capacities,))
 run.results(csv_filename, solvers, num_instances, plot_title)

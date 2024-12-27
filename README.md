@@ -8,4 +8,4 @@
 
 ### Robust Portfolio Allocation SOCP
 
-### Relaxed Max-Cut SDP
+### Maxcut Relaxation SDP

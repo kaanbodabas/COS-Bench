@@ -27,6 +27,7 @@ def solve(n, m, P, q, D, b, cones, verbose):
     j = 0
     soc_infos = []
     psd_infos = []
+    F = None
     for (dim, cone) in cones:
         cone = str(cone)
         if constants.ZERO_CONE in cone:
@@ -35,11 +36,12 @@ def solve(n, m, P, q, D, b, cones, verbose):
             task.putvarboundsliceconst(i, i + dim, mosek.boundkey.lo, 0, np.inf)
         elif constants.SECOND_ORDER_CONE in cone:
             soc_infos.append((i - n, j, dim))
-            task.putvarboundsliceconst(i, i + dim, mosek.boundkey.fr, -np.inf, np.inf)
+            task.putvarboundsliceconst(i + 1, i + dim, mosek.boundkey.fr, -np.inf, np.inf)
             task.appendafes(dim)
-            F = sparse.identity(dim)
-            rows, cols, vals = sparse.find(F)
-            task.putafefentrylist(rows + j, cols + j, vals)
+            if F is None:
+                F = sparse.identity(dim)
+            else:
+                F = sparse.block_diag([F, sparse.identity(dim)], format="csc")
             domain = task.appendquadraticconedomain(dim)
             task.appendacc(domain, list(range(j, j + dim)), None)
             j += dim
@@ -48,14 +50,18 @@ def solve(n, m, P, q, D, b, cones, verbose):
             psd_infos.append((i - n, j, vec_dim, dim))
             task.putvarboundsliceconst(i, i + vec_dim, mosek.boundkey.fr, -np.inf, np.inf)
             task.appendafes(vec_dim)
-            F = psd_helper.send_triu_vec_to_tril_vec(vec_dim, dim, Solver.MOSEK)
-            rows, cols, vals = sparse.find(F)
-            task.putafefentrylist(rows + j, cols + j, vals)
+            if F is None:
+                F = psd_helper.send_triu_vec_to_tril_vec(vec_dim, dim, Solver.MOSEK)
+            else:
+                F = sparse.block_diag([F, psd_helper.send_triu_vec_to_tril_vec(vec_dim, dim, Solver.MOSEK)], format="csc")
             domain = task.appendsvecpsdconedomain(vec_dim)
             task.appendacc(domain, list(range(j, j + vec_dim)), None)
             j += vec_dim
             dim = vec_dim
         i += dim
+    if F is not None:
+        rows, cols, vals = sparse.find(F)
+        task.putafefentrylist(rows, cols, vals)
     task.putobjsense(mosek.objsense.minimize)
     task.optimize()
 

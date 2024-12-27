@@ -36,4 +36,16 @@ def is_solution_optimal(problem, solver, eps):
         relative_term = max(1, min(abs(primal_objective), abs(dual_objective)))
         return abs(primal_objective - dual_objective) < eps_duality_gap * relative_term
 
-    return is_primal_solution_feasible() and is_dual_solution_feasible() and is_duality_gap_small()
+    if not is_primal_solution_feasible():
+        print(f"Solver {solver} reports a primal infeasible solution!")
+        return False
+    
+    if not is_dual_solution_feasible():
+        print(f"Solver {solver} reports a dual infeasible solution!")
+        return False
+    
+    if not is_duality_gap_small():
+        print(f"Solver {solver} reports a suboptimal solution!")
+        return False
+    
+    return True

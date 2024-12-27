@@ -1,6 +1,6 @@
+from constants import NUM_CORES, TIME_LIMIT
 from joblib import Parallel, delayed
 from utils import verify, compute
-from constants import NUM_CORES
 from tqdm import tqdm
 import pandas as pd
 import os
@@ -9,14 +9,14 @@ def check_optimality(problem, solver, eps, solution):
     success = True
     if not verify.is_solution_optimal(problem, solver, eps):
         print(f"Solver {solver} reports an inaccurate primal-dual solution!")
+        solution.solve_time = TIME_LIMIT
         success = False
     return {"Solver": solver, "Solve Time": solution.solve_time, "Success": success}
 
 def start(solvers, csv_filename, problem_class, problem_data, eps=(10**-3, 10**-3, 10**-3), verbose=False):
     solutions = []
-    loading_bar = tqdm(solvers)
-    for solver in loading_bar:
-        loading_bar.set_description(f"Solving instances in {solver}")
+    for i, solver in enumerate(solvers):
+        print(f"Solving instances in {solver} ({i + 1}/{len(solvers)})")
         # print()
         
         def parse_instances(instance):
@@ -32,7 +32,7 @@ def start(solvers, csv_filename, problem_class, problem_data, eps=(10**-3, 10**-
             return check_optimality(problem, solver, eps, solution)
 
         num_jobs = min(len(problem_data[0]), NUM_CORES)
-        results = Parallel(num_jobs)(delayed(parse_instances)(instance) for instance in zip(*problem_data))
+        results = Parallel(num_jobs)(delayed(parse_instances)(instance) for instance in tqdm(zip(*problem_data)))
         solutions.extend(results)
 
     if not os.path.exists("output"):
