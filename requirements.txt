@@ -1,0 +1,16 @@
+clarabel
+coptpy
+cvxpy
+emnist
+gurobipy
+joblib
+matplotlib
+Mosek
+networkx
+numpy
+ortools
+osqp
+pandas
+scipy
+scs
+tqdm
