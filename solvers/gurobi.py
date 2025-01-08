@@ -11,8 +11,7 @@ def solve(n, m, P, q, D, b, cones, verbose):
     model = gp.Model(env=env)
     y = model.addMVar(shape=n, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY) 
     s = model.addMVar(shape=m, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY)
-    objective = 0.5 * y @ P @ y + q @ y
-    model.setObjective(objective)
+    model.setObjective(0.5 * y @ P @ y + q @ y)
     constraint = model.addConstr(D @ y + s == b)
     i = 0
     for (dim, cone) in cones:
