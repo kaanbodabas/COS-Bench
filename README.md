@@ -1,4 +1,4 @@
-# A Convex Optimization Solver Benchmarking Framework
+# COS-Bench: A Convex Optimization Solver Benchmarking Framework
 
 ## Usage Guide
 
